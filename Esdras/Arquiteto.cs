@@ -7,24 +7,29 @@ public class Arquiteto : MonoBehaviour
     public Transform[] waypoints;
     public float moveSpeed = 3f;
     public float waypointThreshold = 0.1f;
+    public GameObject posicaoInicialMovimento;
 
     [Header("Configurações de Tiro")]
-    public GameObject projetilPrefab;
+    public GameObject projetilVerdePrefab;
+    public GameObject projetilAmareloPrefab;
+    public GameObject projetilVermelhoPrefab;
     public Transform pontoDeTiro;
     public float tempoDeEspera = 3f;
     public Transform[] alvosPossiveis;
 
     [Header("Comportamento Final")]
-    public bool pararNoUltimoWaypoint = true; // Ativar/desativar esta funcionalidade
+    public bool pararNoUltimoWaypoint = true;
 
-    private bool podeAtirar = true; // Controle global de disparos
-
+    private bool podeAtirar = false;
     private int currentWaypointIndex = 0;
     private bool isMovingForward = true;
     private bool isWaiting = false;
     private float waitTimer = 0f;
     private Transform ultimoAlvoAtirado = null;
     private List<Transform> alvosDisponiveis = new List<Transform>();
+
+    private bool comandoRecebido = false;
+    private bool indoParaPosicaoInicial = false;
 
     void Start()
     {
@@ -33,31 +38,61 @@ public class Arquiteto : MonoBehaviour
 
     void Update()
     {
+        if (!comandoRecebido) return;
 
-        if (waypoints.Length == 0 || !podeAtirar) return;
-
-        if (isWaiting)
+        if (indoParaPosicaoInicial)
         {
-            waitTimer += Time.deltaTime;
-            if (waitTimer >= tempoDeEspera)
-            {
-                isWaiting = false;
-                GetNextWaypoint();
-            }
+            MoverParaPosicaoInicial();
         }
-        else
+        else if (podeAtirar)
         {
-            MoveToWaypoint();
+            if (waypoints.Length == 0) return;
+
+            if (isWaiting)
+            {
+                waitTimer += Time.deltaTime;
+                if (waitTimer >= tempoDeEspera)
+                {
+                    isWaiting = false;
+                    GetNextWaypoint();
+                }
+            }
+            else
+            {
+                MoveToWaypoint();
+            }
         }
     }
 
+    public void IniciarMovimento()
+    {
+        if (!comandoRecebido)
+        {
+            comandoRecebido = true;
+            indoParaPosicaoInicial = true;
+        }
+    }
 
+    void MoverParaPosicaoInicial()
+    {
+        if (posicaoInicialMovimento == null)
+        {
+            Debug.LogWarning("Posição inicial de movimento não atribuída!");
+            return;
+        }
+
+        transform.position = Vector2.MoveTowards(transform.position, posicaoInicialMovimento.transform.position, moveSpeed * Time.deltaTime);
+
+        if (Vector2.Distance(transform.position, posicaoInicialMovimento.transform.position) < waypointThreshold)
+        {
+            indoParaPosicaoInicial = false;
+            podeAtirar = true;
+        }
+    }
 
     void ResetarAlvosDisponiveis()
     {
         alvosDisponiveis.Clear();
-
-        // Adiciona todos os alvos possíveis, exceto o último atirado (se houver)
         foreach (Transform alvo in alvosPossiveis)
         {
             if (alvo != null && alvo != ultimoAlvoAtirado)
@@ -66,7 +101,6 @@ public class Arquiteto : MonoBehaviour
             }
         }
 
-        // Se só tinha um alvo disponível, permite atirar nele novamente
         if (alvosDisponiveis.Count == 0 && alvosPossiveis.Length > 0)
         {
             alvosDisponiveis.AddRange(alvosPossiveis);
@@ -95,32 +129,54 @@ public class Arquiteto : MonoBehaviour
     {
         if (!podeAtirar) return;
 
-        if (projetilPrefab == null || pontoDeTiro == null || alvosDisponiveis.Count == 0)
+        if (pontoDeTiro == null || alvosDisponiveis.Count == 0)
         {
             Debug.LogWarning("Configurações de tiro incompletas ou sem alvos disponíveis!");
             return;
         }
 
-        // Seleciona aleatoriamente um alvo disponível
         int randomIndex = Random.Range(0, alvosDisponiveis.Count);
         Transform alvoAtual = alvosDisponiveis[randomIndex];
         ultimoAlvoAtirado = alvoAtual;
         alvosDisponiveis.RemoveAt(randomIndex);
 
-        // Instancia e configura o projétil
-        GameObject projetil = Instantiate(projetilPrefab, pontoDeTiro.position, Quaternion.identity);
-        DisparoCodigo dc = projetil.GetComponent<DisparoCodigo>();
-        if (dc == null)
-        {
-            dc = projetil.AddComponent<DisparoCodigo>();
-        }
-        dc.SetTarget(alvoAtual.position);
+        GameObject projetilPrefab = GetProjetilPrefabForAlvo(alvoAtual);
 
-        // Se não houver mais alvos disponíveis, reseta para a próxima rodada
+        if (projetilPrefab != null)
+        {
+            // Instancia o projétil sem rotação especial
+            GameObject projetil = Instantiate(projetilPrefab, pontoDeTiro.position, Quaternion.identity);
+
+            // Passa o alvo para o projétil
+            DisparoCodigo dc = projetil.GetComponent<DisparoCodigo>();
+            if (dc == null)
+            {
+                dc = projetil.AddComponent<DisparoCodigo>();
+            }
+            dc.SetTarget(alvoAtual.position);
+        }
+
         if (alvosDisponiveis.Count == 0)
         {
             ResetarAlvosDisponiveis();
         }
+    }
+
+    GameObject GetProjetilPrefabForAlvo(Transform alvo)
+    {
+        int index = System.Array.IndexOf(alvosPossiveis, alvo);
+
+        if (index == -1)
+        {
+            Debug.LogWarning("Alvo não encontrado em alvosPossiveis! Usando projétil padrão.");
+            return projetilVerdePrefab;
+        }
+
+        if (index == 0 || index == 4) return projetilVerdePrefab;
+        if (index == 1 || index == 3) return projetilAmareloPrefab;
+        if (index == 2 || index == 5) return projetilVermelhoPrefab;
+
+        return projetilVerdePrefab;
     }
 
     void GetNextWaypoint()
@@ -128,12 +184,9 @@ public class Arquiteto : MonoBehaviour
         if (isMovingForward)
         {
             currentWaypointIndex++;
-
-            // Verifica se chegou no último waypoint
-            if (currentWaypointIndex >= waypoints.Length )
+            if (currentWaypointIndex >= waypoints.Length)
             {
                 isMovingForward = false;
-
                 if (pararNoUltimoWaypoint)
                 {
                     podeAtirar = false;
@@ -162,6 +215,12 @@ public class Arquiteto : MonoBehaviour
             {
                 Gizmos.DrawLine(waypoints[i].position, waypoints[i + 1].position);
             }
+        }
+
+        if (posicaoInicialMovimento != null)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireCube(posicaoInicialMovimento.transform.position, Vector3.one * 0.5f);
         }
     }
 }
