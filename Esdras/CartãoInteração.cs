@@ -3,11 +3,17 @@ using UnityEngine.UI;
 
 public class CartãoInteração : MonoBehaviour
 {
-    public GameObject interactionButton; // Botão de interação
-    public float interactionRange = 2f;  // Distância máxima para interagir
-    public Transform player;             // Referência ao jogador
+    public float interactionRange = 0;
 
-    private bool foiClicado = false;      // Flag para saber se já clicou
+    public GameObject interactionButton;       // Botão de interação
+    public Transform player;                   // Referência ao jogador
+
+    public GameObject objetoParaDesativar1;    // Primeiro objeto a ser desativado
+    public GameObject objetoParaDesativar2;    // Segundo objeto a ser desativado
+    public GameObject cartaoAtiva;
+    public GameObject cartaoDesativa;
+
+    private bool foiClicado = false;           // Flag para saber se já clicou
 
     private void Start()
     {
@@ -39,9 +45,13 @@ public class CartãoInteração : MonoBehaviour
 
     private void AoClicarBotao()
     {
-        interactionButton.SetActive(false); // Esconde o botão
-        interactionRange = 0f;              // Zera o alcance
-        foiClicado = true;                  // Marca como clicado
+        interactionButton.SetActive(false);    // Esconde o botão
+        interactionRange = 0f;                 // Zera o alcance
+        foiClicado = true;                     // Marca como clicado
+        objetoParaDesativar1.SetActive(false);
+        objetoParaDesativar2.SetActive(false);
+        cartaoAtiva.SetActive(true);
+        cartaoDesativa.SetActive(false);
     }
 
     private void OnDrawGizmosSelected()

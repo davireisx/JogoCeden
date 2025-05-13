@@ -1,5 +1,6 @@
 using UnityEngine;
-
+using System.Collections;
+using UnityEngine.UI;
 public class Esdras : MonoBehaviour
 {
     [Header("Movimentação do Jogador")]
@@ -14,6 +15,8 @@ public class Esdras : MonoBehaviour
     [SerializeField] private SpriteRenderer spriteRenderer; // Componente SpriteRenderer para o sprite
 
     private bool isFacingLeft = false; // Controle para indicar se o jogador está virado para a esquerda
+    private bool inputLocked = false;
+    private float inputLockTimer = 0f;
 
     private void Start()
     {
@@ -31,8 +34,26 @@ public class Esdras : MonoBehaviour
         HandleMovement(); // Gerencia o movimento do jogador
     }
 
-    private void HandleMovement()
+    public void LockInput(float duration)
     {
+        inputLocked = true;
+        inputLockTimer = duration;
+    }
+
+
+    public void HandleMovement()
+    {
+        if (inputLocked)
+        {
+            inputLockTimer -= Time.deltaTime;
+            if (inputLockTimer <= 0f)
+            {
+                inputLocked = false;
+            }
+            anim.SetBool("walking", false);
+            return;
+        }
+
         if (joystick != null)
         {
             // Obtém o input do joystick
@@ -75,4 +96,23 @@ public class Esdras : MonoBehaviour
         // Retorna true se o jogador estiver virado para a esquerda
         return isFacingLeft;
     }
+
+    public void SetInput(Vector2 input)
+    {
+        moveInput = input;
+    }
+
+
+    public Vector2 GetCurrentInput()
+    {
+        return moveInput;
+    }
+
+
+    public bool IsMoving()
+    {
+        return Mathf.Abs(moveInput.x) > 0.1f || Mathf.Abs(moveInput.y) > 0.1f;
+    }
+
+
 }

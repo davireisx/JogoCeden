@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 
 public class Arquiteto : MonoBehaviour
 {
@@ -20,6 +21,9 @@ public class Arquiteto : MonoBehaviour
     [Header("Comportamento Final")]
     public bool pararNoUltimoWaypoint = true;
 
+    [Header("Referências de Animação")]
+    public Animator animator;
+
     private bool podeAtirar = false;
     private int currentWaypointIndex = 0;
     private bool isMovingForward = true;
@@ -34,6 +38,7 @@ public class Arquiteto : MonoBehaviour
     void Start()
     {
         ResetarAlvosDisponiveis();
+        animator.SetBool("Atacando", false);
     }
 
     void Update()
@@ -59,6 +64,7 @@ public class Arquiteto : MonoBehaviour
             }
             else
             {
+                animator.SetBool("Atacando", false);
                 MoveToWaypoint();
             }
         }
@@ -70,7 +76,16 @@ public class Arquiteto : MonoBehaviour
         {
             comandoRecebido = true;
             indoParaPosicaoInicial = true;
+
+            StartCoroutine(ExecutarInicio());
         }
+    }
+
+    IEnumerator ExecutarInicio()
+    {
+        animator.SetBool("Atacando", true);
+        yield return new WaitForSeconds(0.5f);
+        animator.SetBool("Atacando", false);
     }
 
     void MoverParaPosicaoInicial()
@@ -114,14 +129,20 @@ public class Arquiteto : MonoBehaviour
 
         if (Vector2.Distance(transform.position, targetPosition) < waypointThreshold)
         {
-            StartWaiting();
+            StartCoroutine(StartWaiting());
         }
     }
 
-    void StartWaiting()
+    IEnumerator StartWaiting()
     {
         isWaiting = true;
         waitTimer = 0f;
+
+        // Ativa animação de ataque por 1 segundo
+        animator.SetBool("Atacando", true);
+        yield return new WaitForSeconds(1f);
+        animator.SetBool("Atacando", false);
+
         AtirarParaAlvoAleatorio();
     }
 
@@ -144,10 +165,8 @@ public class Arquiteto : MonoBehaviour
 
         if (projetilPrefab != null)
         {
-            // Instancia o projétil sem rotação especial
             GameObject projetil = Instantiate(projetilPrefab, pontoDeTiro.position, Quaternion.identity);
 
-            // Passa o alvo para o projétil
             DisparoCodigo dc = projetil.GetComponent<DisparoCodigo>();
             if (dc == null)
             {
@@ -187,9 +206,11 @@ public class Arquiteto : MonoBehaviour
             if (currentWaypointIndex >= waypoints.Length)
             {
                 isMovingForward = false;
+
                 if (pararNoUltimoWaypoint)
                 {
                     podeAtirar = false;
+                    animator.SetBool("Atacando", false); // volta para idle
                     Debug.Log("Arquiteto chegou no ponto final - disparos desativados");
                 }
             }

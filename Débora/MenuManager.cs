@@ -4,30 +4,26 @@ using UnityEngine.SceneManagement;
 
 public class MenuManager : MonoBehaviour
 {
-    // Nomes das cenas que cada botão deve carregar
-    public Button cenaBotao1;
-    public Button cenaBotao2;
-    public Button cenaBotao3;
-    public Button cenaBotao4;
+    public string nomeCena1;
+    public string nomeCena2;
 
-    // Funções que serão chamadas pelos botões
+    public Button cena1;
+    public Button sair;
+
+    private void Start()
+    {
+        // Vincula os botões aos métodos
+        cena1.onClick.AddListener(OnBotao1Click);
+        sair.onClick.AddListener(OnBotao3Click);
+    }
+
     public void OnBotao1Click()
     {
-            SceneManager.LoadScene("SlidePuzzle_3X3");
+        SceneManager.LoadScene(nomeCena1);
     }
-
-    public void OnBotao2Click()
-    {       
-            SceneManager.LoadScene("SlidePuzzle_4X4");
-    }
-
     public void OnBotao3Click()
     {
-            SceneManager.LoadScene("SlidePuzzle_5X5");
-    }
-
-    public void OnBotao4Click()
-    { 
-            SceneManager.LoadScene("SlidePuzzle_6X6");
+        Application.Quit(); // Encerra o jogo (funciona apenas em builds)
+        Debug.Log("Sair do jogo."); // Para testes no editor
     }
 }

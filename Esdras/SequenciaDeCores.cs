@@ -21,6 +21,7 @@ public class DesafioDasCores : MonoBehaviour
     [Header("UI de Feedback")]
     public Text textoErros;
     public Text textoRelogio;
+    public Text textoCliques;
 
     [Header("Configuração de Rodadas")]
     [SerializeField] private int cliquesParaProximaRodada;
@@ -249,80 +250,83 @@ public class DesafioDasCores : MonoBehaviour
     //      [ Botões ]         //
     //=========================//
 
-    public void BotaoClicado(Button botao)
+public void BotaoClicado(Button botao)
+{
+    if (!podeClicar || !botao.gameObject.activeSelf || desafioFinalizado) return;
+
+    botao.interactable = false;
+    bool acerto = botao.name == CorDaRodada;
+    int i = botoes.IndexOf(botao);
+
+    if (acerto)
     {
-        if (!podeClicar || !botao.gameObject.activeSelf || desafioFinalizado) return;
+        somAcerto.Play();
+        acertosNaRodada++;
+        AtualizarTextoCliques();
 
-        botao.interactable = false;
-        bool acerto = botao.name == CorDaRodada;
-        int i = botoes.IndexOf(botao);
-
-        if (acerto)
-        {
-            somAcerto.Play();
-
-            // 1) Incrementa acertos imediatamente
-            acertosNaRodada++;
-
-            // 2) Decide se é fim por vitória
-            bool vaiFinalizar = acertosNaRodada >= cliquesParaProximaRodada && rodadaAtual + 1 >= sequenciaCores.Count;
-
-            // 3) Só fade se NÃO for final
-            if (!vaiFinalizar)
-                StartCoroutine(FadeOutEEsconder(botao.image, bordasDosBotoes[i]));
-
-            // restante lógica de cliquesPorCor...
+            // Atualiza contagem de cliques por cor
             if (corParaPosicao.TryGetValue(CorDaRodada, out int pos))
+        {
+            cliquesPorCor[pos]++;
+            if (cliquesPorCor[pos] == cliquesParaProximaRodada)
             {
-                cliquesPorCor[pos]++;
-                if (cliquesPorCor[pos] == cliquesParaProximaRodada)
-                {
-                    textosEmbaralhados[pos] = codigoCorreto[pos];
-                    VerificarEfixarTextos();
-                }
+                textosEmbaralhados[pos] = codigoCorreto[pos];
+                VerificarEfixarTextos();
             }
+        }
 
-            CancelInvoke(nameof(EmbaralharBotoes));
+        CancelInvoke(nameof(EmbaralharBotoes));
 
-            if (vaiFinalizar)
-            {
-                // vitória
-                podeClicar = false;
-                StartCoroutine(CompletarDesafio());
-            }
+        // Verifica se é o último clique necessário para vencer
+        bool ultimoCliqueParaVencer = (acertosNaRodada >= cliquesParaProximaRodada) && 
+                                     (rodadaAtual == sequenciaCores.Count - 1);
+
+        if (ultimoCliqueParaVencer)
+        {
+            // Vitória - desativa cliques imediatamente
+            podeClicar = false;
+            StartCoroutine(CompletarDesafio());
+        }
             else if (acertosNaRodada >= cliquesParaProximaRodada)
             {
-                // próxima rodada
                 podeClicar = false;
-                rodadaAtual++;
-                StartCoroutine(IniciarRodada());
+                StartCoroutine(EsperarAntesDeAvancarRodada());
             }
             else
-            {
-                StartCoroutine(ReiniciarEmbaralhamento());
-            }
+        {
+            StartCoroutine(FadeOutEEsconder(botao.image, bordasDosBotoes[i]));
+            StartCoroutine(ReiniciarEmbaralhamento());
+        }
+    }
+    else
+    {
+        // Lógica de erro
+        errosCometidos++;
+        textoErros.text = $"Erros:  {errosCometidos} / {errosRodada}";
+        somErro.Play();
+        
+        bool ultimoErro = errosCometidos >= errosRodada;
+        
+        if (!ultimoErro)
+        {
+            StartCoroutine(FadeOutEEsconder(botao.image, bordasDosBotoes[i]));
+            CancelInvoke(nameof(EmbaralharBotoes));
+            StartCoroutine(ReiniciarEmbaralhamento());
         }
         else
         {
-            // lógica de erro (mantida igual)
-            errosCometidos++;
-            textoErros.text = $"Erros:  {errosCometidos} / {errosRodada}";
-            somErro.Play();
-            bool vaiFinalizarErr = errosCometidos >= errosRodada;
-            if (!vaiFinalizarErr)
-                StartCoroutine(FadeOutEEsconder(botao.image, bordasDosBotoes[i]));
-
-            if (vaiFinalizarErr)
-            {
-                podeClicar = false;
-                StartCoroutine(Derrota());
-            }
-            else
-            {
-                CancelInvoke(nameof(EmbaralharBotoes));
-                StartCoroutine(ReiniciarEmbaralhamento());
-            }
+            // Derrota - desativa cliques imediatamente
+            podeClicar = false;
+            StartCoroutine(Derrota());
         }
+    }
+}
+
+    private IEnumerator EsperarAntesDeAvancarRodada()
+    {
+        yield return new WaitForSeconds(0.2f);
+        rodadaAtual++;
+        StartCoroutine(IniciarRodada());
     }
 
 
@@ -384,6 +388,7 @@ public class DesafioDasCores : MonoBehaviour
         rodadaEmAndamento = true;
         podeClicar = false;
         acertosNaRodada = 0;
+        AtualizarTextoCliques();
 
         // 1) Reative todos os botões no início da rodada
         foreach (var botao in botoes)
@@ -410,6 +415,11 @@ public class DesafioDasCores : MonoBehaviour
         rodadaEmAndamento = false;
     }
 
+
+    private void AtualizarTextoCliques()
+    {
+        textoCliques.text = $"Cliques:  {acertosNaRodada} / {cliquesParaProximaRodada}";
+    }
 
     private IEnumerator PiscarBordaCorDaRodada()
     {
@@ -498,7 +508,7 @@ public class DesafioDasCores : MonoBehaviour
         // 2) Pisca verde por 4 segundos
         yield return StartCoroutine(PiscarBotoes(Color.green, 4f));
         telaVitoria.gameObject.SetActive(true);
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(1.5f);
         painelDoJogo.SetActive(false);
 
         // Use a catraca armazenada em vez de encontrar por tag
@@ -537,7 +547,7 @@ public class DesafioDasCores : MonoBehaviour
         // 2) Pisca vermelho por 4 segundos
         yield return StartCoroutine(PiscarBotoes(Color.red, 4f));
         telaDerrota.gameObject.SetActive(true);
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(1.5f);
         painelDoJogo.SetActive(false);
 
         yield return new WaitForSeconds(0.5f);

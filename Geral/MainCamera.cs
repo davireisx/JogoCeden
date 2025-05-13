@@ -3,7 +3,7 @@ using UnityEngine;
 public class MainCamera : MonoBehaviour
 {
     private Camera mainCamera;
-    private float baseOrthographicSize = 5f; // Valor padrão do tamanho ortográfico.
+    private float baseOrthographicSize; // Valor padrão do tamanho ortográfico.
 
     private int lastScreenWidth;
     private int lastScreenHeight;
