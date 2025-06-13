@@ -5,6 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(Animator))]
 public class AlunoMovimento : MonoBehaviour
 {
+
     public event Action OnCaminhoCompleto;
 
     [Header("Configurações de Movimento")]
@@ -95,13 +96,14 @@ public class AlunoMovimento : MonoBehaviour
 
             if (waypointAlvo == null)
             {
-                Debug.LogError($"Waypoint {waypointAtual} é nulo!", this);
+                Debug.LogWarning($"Waypoint {waypointAtual} foi destruído ou está nulo!", this);
                 yield break;
             }
 
             if (debugLogs) Debug.Log($"Movendo para waypoint {waypointAtual}", this);
 
-            while (Vector3.Distance(transform.position, waypointAlvo.position) > distanciaMinima)
+            // Movimento até o waypoint
+            while (waypointAlvo != null && Vector3.Distance(transform.position, waypointAlvo.position) > distanciaMinima)
             {
                 transform.position = Vector3.MoveTowards(
                     transform.position,
@@ -110,6 +112,13 @@ public class AlunoMovimento : MonoBehaviour
                 );
 
                 yield return null;
+
+                // Checagem extra caso o waypoint seja destruído durante o movimento
+                if (waypointAlvo == null)
+                {
+                    Debug.LogWarning($"Waypoint {waypointAtual} foi destruído durante o movimento!", this);
+                    yield break;
+                }
             }
 
             waypointAtual++;
@@ -130,6 +139,7 @@ public class AlunoMovimento : MonoBehaviour
         AtualizarAnimacao();
         OnCaminhoCompleto?.Invoke();
     }
+
 
     private void AtualizarAnimacao()
     {

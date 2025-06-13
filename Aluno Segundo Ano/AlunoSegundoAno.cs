@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+
 
 public class AlunoSegundoAno : MonoBehaviour
 {
@@ -12,10 +14,13 @@ public class AlunoSegundoAno : MonoBehaviour
     private bool inputLocked = false;
     private float inputLockTimer = 0f;
 
+    private Rigidbody2D rb;
     private int vida;
     private bool podeTomarDano = true;
     private bool dentroDoInimigo = false;
     private float tempoParaProximoDano = 0f;
+
+
 
     [Header("Movimentação do Jogador")]
     [SerializeField] private float moveSpeed;
@@ -36,6 +41,7 @@ public class AlunoSegundoAno : MonoBehaviour
     [Header("Componentes")]
     [SerializeField] private Animator anim;
     [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private string telaGameOver;
     private Color corOriginal;
 
     [Header("Knockback")]
@@ -45,6 +51,7 @@ public class AlunoSegundoAno : MonoBehaviour
 
     private void Start()
     {
+        rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         corOriginal = spriteRenderer.color;
@@ -59,12 +66,22 @@ public class AlunoSegundoAno : MonoBehaviour
 
     private void Update()
     {
+        moveInput = new Vector2(joystick.Horizontal, joystick.Vertical);
+
         if (moveInput.magnitude > 0.1f)
             direcaoAnterior = moveInput.normalized;
 
-        HandleMovement();
         VerificarContatoComInimigo();
+        anim.SetBool("walking", moveInput.magnitude > 0.1f);
+        FlipCharacter();
     }
+
+
+    private void FixedUpdate()
+    {
+        HandleMovement();
+    }
+
 
     private void HandleMovement()
     {
@@ -72,27 +89,20 @@ public class AlunoSegundoAno : MonoBehaviour
         {
             inputLockTimer -= Time.deltaTime;
             if (inputLockTimer <= 0f) inputLocked = false;
-            anim.SetBool("walking", false);
             return;
         }
-
-        if (joystick == null)
-        {
-            Debug.LogWarning("Joystick não configurado.");
-            return;
-        }
-
-        moveInput = new Vector2(joystick.Horizontal, joystick.Vertical);
 
         if (moveInput.magnitude > 0.1f)
         {
             ultimaDirecao = moveInput.normalized;
-            transform.Translate(moveInput * moveSpeed * Time.deltaTime);
-        }
+            float suavizacao = Mathf.Clamp01(moveInput.magnitude);
+            float inputModulado = Mathf.Pow(suavizacao, 1.5f); // curva exponencial
+            Vector2 direcaoFinal = moveInput.normalized * inputModulado;
+            rb.MovePosition(rb.position + direcaoFinal * moveSpeed * Time.fixedDeltaTime);
 
-        anim.SetBool("walking", moveInput.magnitude > 0.1f);
-        FlipCharacter();
+        }
     }
+
 
     private void FlipCharacter()
     {
@@ -176,7 +186,14 @@ public class AlunoSegundoAno : MonoBehaviour
     private void Morrer()
     {
         Debug.Log("Jogador morreu!");
-        gameObject.SetActive(false);
+        // Troca de cena após um pequeno atraso (recomendado)
+        StartCoroutine(MudarCenaAposMorte());
+    }
+
+    private IEnumerator MudarCenaAposMorte()
+    {
+        yield return new WaitForSeconds(0.1f); // Tempo para mostrar animação ou som de morte
+        SceneManager.LoadScene(telaGameOver); // Troque "GameOver" pelo nome exato da sua cena
     }
 
     public void RecuperarVida(int quantidade)

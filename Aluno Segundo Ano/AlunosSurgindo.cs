@@ -106,25 +106,35 @@ public class AlunoSurgindo : MonoBehaviour
     {
         while (spawningAtivo)
         {
-            if (!waveEmProgresso && alunosAtuais.Count == 0)
-            {
-                waveEmProgresso = true;
-                waveAtual++;
-                yield return StartCoroutine(SpawnWave());
-            }
+            waveEmProgresso = true;
+            waveAtual++;
+
+            Debug.Log($"Esperando {tempoEntreWaves} segundos antes da wave {waveAtual}...");
+            yield return new WaitForSeconds(tempoEntreWaves);
+
+            yield return StartCoroutine(SpawnWave());
+
+            waveEmProgresso = false;
+
             yield return new WaitForSeconds(1f);
         }
     }
 
+
     IEnumerator SpawnWave()
     {
         int quantidadeAlunos = Mathf.RoundToInt(alunosPorWave + Random.Range(-variacaoTamanhoWave, variacaoTamanhoWave));
-        quantidadeAlunos = Mathf.Max(1, quantidadeAlunos);
+        quantidadeAlunos = Mathf.Clamp(quantidadeAlunos, 1, alunoPrefabs.Length); // Impede mais alunos do que tipos
 
         Debug.Log($"Iniciando Wave {waveAtual} com {quantidadeAlunos} alunos");
 
         List<int> spawnsDisponiveis = ObterSpawnsDisponiveis();
         quantidadeAlunos = Mathf.Min(quantidadeAlunos, spawnsDisponiveis.Count);
+
+        // Cria uma lista de índices únicos dos prefabs embaralhada
+        List<int> indicesUnicosPrefabs = new List<int>();
+        for (int i = 0; i < alunoPrefabs.Length; i++) indicesUnicosPrefabs.Add(i);
+        Shuffle(indicesUnicosPrefabs);
 
         for (int i = 0; i < quantidadeAlunos; i++)
         {
@@ -144,12 +154,15 @@ public class AlunoSurgindo : MonoBehaviour
             }
 
             spawnPoints[indiceSpawn].emUso = true;
-            SpawnAluno(indiceSpawn);
+
+            // Usa o tipo único correspondente
+            int prefabIndex = indicesUnicosPrefabs[i];
+            SpawnAluno(indiceSpawn, prefabIndex);
+
             yield return new WaitForSeconds(intervaloEntreSpawns);
         }
-
-        yield return StartCoroutine(VerificarCompletudeWave());
     }
+
 
     List<int> ObterSpawnsDisponiveis()
     {
@@ -164,9 +177,9 @@ public class AlunoSurgindo : MonoBehaviour
         return disponiveis;
     }
 
-    void SpawnAluno(int indiceSpawn)
+    void SpawnAluno(int indiceSpawn, int prefabIndex)
     {
-        GameObject alunoPrefab = alunoPrefabs[Random.Range(0, alunoPrefabs.Length)];
+        GameObject alunoPrefab = alunoPrefabs[prefabIndex];
 
         GameObject aluno = Instantiate(
             alunoPrefab,
@@ -174,8 +187,7 @@ public class AlunoSurgindo : MonoBehaviour
             spawnPoints[indiceSpawn].spawnTransform.rotation
         );
 
-        // Garante que o aluno não seja destruído ao carregar uma nova cena
-        DontDestroyOnLoad(aluno);
+        //DontDestroyOnLoad(aluno);
 
         AlunoMovimento movimento = aluno.GetComponent<AlunoMovimento>();
         if (movimento == null)
@@ -191,9 +203,10 @@ public class AlunoSurgindo : MonoBehaviour
         };
 
         alunosAtuais.Add(aluno);
-        todosAlunos.Add(aluno); // Adiciona à lista estática
+        todosAlunos.Add(aluno);
         Debug.Log($"Aluno spawnado no ponto {indiceSpawn}. Total de alunos: {alunosAtuais.Count}");
     }
+
 
     void RemoverAluno(GameObject aluno)
     {
@@ -266,4 +279,17 @@ public class AlunoSurgindo : MonoBehaviour
         }
         todosAlunos.Clear();
     }
+
+
+    void Shuffle<T>(List<T> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            T temp = list[i];
+            list[i] = list[j];
+            list[j] = temp;
+        }
+    }
+
 }

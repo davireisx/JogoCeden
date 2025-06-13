@@ -2,56 +2,79 @@ using UnityEngine;
 
 public class CameraSeguirEsdras : MonoBehaviour
 {
-    public Transform player; // Referência ao transform do jogador.
-    public float timeLerp = 0.1f; // Suavidade da transição da câmera.
-    public Vector2 offset = new Vector2(0f, 0.5f); // Offset opcional para ajustar a posição da câmera em relação ao jogador.
+    public Transform player;
+    public float timeLerp = 0.1f;
+    public float globalMinX, globalMaxX, globalMinY, globalMaxY;
 
-    public float globalMinX;
-    public float globalMaxX;
-    public float globalMinY;
-    public float globalMaxY;
-
-    public float baseOrthographicSize = 6f; // Valor base, aumente pra mais campo de visão.
-    public float targetAspectRatio = 16f / 10f; // Proporção desejada, ex: 16:10 é mais larga que 4:3.
+    [Header("Configuração de Tamanho")]
+    public float targetWidthInUnits = 64f;
+    public float padding = 2f;
 
     private Camera mainCamera;
-    private int lastScreenWidth;
-    private int lastScreenHeight;
+    private int lastScreenWidth, lastScreenHeight;
 
     void Start()
     {
         mainCamera = Camera.main;
-        AdjustCamera(); // Configuração inicial do tamanho ortográfico.
+        AjustarCamera();
     }
 
     void Update()
     {
         if (Screen.width != lastScreenWidth || Screen.height != lastScreenHeight)
         {
-            AdjustCamera();
+            AjustarCamera();
             lastScreenWidth = Screen.width;
             lastScreenHeight = Screen.height;
         }
     }
 
-    void LateUpdate() // Use LateUpdate para seguir suavemente o jogador após ele se mover.
+    void AjustarCamera()
+    {
+        float aspectRatio = (float)Screen.width / Screen.height;
+
+        // Calcula o tamanho baseado na largura desejada
+        float desiredOrthographicSize = (targetWidthInUnits / aspectRatio) / 2f;
+
+        // Aplica padding
+        desiredOrthographicSize -= padding / aspectRatio;
+
+        // Calcula o tamanho máximo permitido pelos limites verticais
+        float maxVerticalSize = (globalMaxY - globalMinY) / 2f;
+
+        // Calcula o tamanho máximo permitido pelos limites horizontais
+        float maxHorizontalSize = (globalMaxX - globalMinX) / (2f * aspectRatio);
+
+        // Usa o menor tamanho entre o desejado e o máximo permitido
+        mainCamera.orthographicSize = Mathf.Min(desiredOrthographicSize, maxVerticalSize, maxHorizontalSize);
+
+        // Garante um tamanho mínimo
+        mainCamera.orthographicSize = Mathf.Max(mainCamera.orthographicSize, 1f);
+    }
+
+    void FixedUpdate()
     {
         if (player == null) return;
 
-        Vector3 targetPos = player.position + (Vector3)offset;
-        targetPos.z = -10f; // Z fixo pra câmera ortográfica
+        Vector3 targetPosition = player.position + new Vector3(-0.9f, 0.8f, -10);
+        Vector3 newPosition = Vector3.Lerp(transform.position, targetPosition, timeLerp);
 
-        Vector3 smoothedPos = Vector3.Lerp(transform.position, targetPos, timeLerp);
+        // Calcula os limites efetivos da câmera
+        float verticalExtent = mainCamera.orthographicSize;
+        float horizontalExtent = verticalExtent * mainCamera.aspect;
 
-        smoothedPos.x = Mathf.Clamp(smoothedPos.x, globalMinX, globalMaxX);
-        smoothedPos.y = Mathf.Clamp(smoothedPos.y, globalMinY, globalMaxY);
+        float effectiveMinX = globalMinX + horizontalExtent;
+        float effectiveMaxX = globalMaxX - horizontalExtent;
+        float effectiveMinY = globalMinY + verticalExtent;
+        float effectiveMaxY = globalMaxY - verticalExtent;
 
-        transform.position = smoothedPos;
+        // Garante que os limites não sejam invertidos
+        if (effectiveMinX > effectiveMaxX) effectiveMinX = effectiveMaxX = (globalMinX + globalMaxX) / 2f;
+        if (effectiveMinY > effectiveMaxY) effectiveMinY = effectiveMaxY = (globalMinY + globalMaxY) / 2f;
+
+        newPosition.x = Mathf.Clamp(newPosition.x, effectiveMinX, effectiveMaxX);
+        newPosition.y = Mathf.Clamp(newPosition.y, effectiveMinY, effectiveMaxY);
+
+        transform.position = newPosition;
     }
-
-    void AdjustCamera()
-    {
-        mainCamera.orthographicSize = baseOrthographicSize;
-    }
-
 }

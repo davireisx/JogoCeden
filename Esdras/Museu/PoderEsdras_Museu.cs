@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 
-public class DesafioDasCores : MonoBehaviour
+public class PoderEsdras_Museu : MonoBehaviour
 {
     //=========================//
     //    [ UI & Elementos ]   //
@@ -14,6 +14,9 @@ public class DesafioDasCores : MonoBehaviour
     public List<Button> botoes;
     public List<Image> coresDosBotoes;
     public List<Image> bordasDosBotoes;
+    public Button botaoFechar;
+    public Button botaoTentarNovamente;
+
 
     [Header("Código na Tela")]
     public List<Text> textosDoCodigo;
@@ -73,7 +76,7 @@ public class DesafioDasCores : MonoBehaviour
     private int acertosNaRodada = 0;
     private int indiceTextoAtual = 0;
 
-    private Catraca catracaClicada;
+    private bool jaFinalizou = false;
 
     private Dictionary<string, int> corParaPosicao = new(); // Mapeia cor → posição no array
     private Dictionary<int, string> posicaoParaCor = new(); // Mapeia posição → cor
@@ -90,13 +93,13 @@ public class DesafioDasCores : MonoBehaviour
     private readonly List<string> codigoCorreto = new()
     {
         "                       INICIAR    SISTEMA",    // posição 0
-        "         LER    cartão    de    identificação",         // posição 1
-        "           SE    cartão    é    válido,    ENTÃO",                       // posição 2
+        "            DIGITAR    senha    de    acesso",         // posição 1
+        "           SE    senha    é    correta,    ENTÃO",                       // posição 2
         "                      {      ''Acesso    Confirmado''",       // posição 3
-        "                                   LIBERAR     catraca     }  ",// posição 4
+        "                                   DESTRAVAR     porta     }  ",// posição 4
         "          SENÃO",                   // posição 5
         "                       {      ''Acesso    Negado''", // posição 6
-        "                                   TRAVAR     catraca     }  "                        // posição 7
+        "                                   MANTER   porta   fechada    }  "                        // posição 7
     };
 
     private List<string> textosEmbaralhados = new();
@@ -111,6 +114,8 @@ public class DesafioDasCores : MonoBehaviour
 
     private void Start()
     {
+
+        botaoTentarNovamente.gameObject.SetActive(false);
         textoErros.text = $"Erros:  {errosCometidos} / {errosRodada}";
         // Ativa todos os botões no início do jogo
         foreach (var botao in botoes)
@@ -126,9 +131,8 @@ public class DesafioDasCores : MonoBehaviour
 
     }
 
-    public void IniciarMinigame(Catraca catraca)
+    public void IniciarMinigame()
     {
-        catracaClicada = catraca;
         InicializarJogo();
         relogioAtivo = true;
         tempoRestante = tempoTotal;
@@ -252,7 +256,8 @@ public class DesafioDasCores : MonoBehaviour
 
     public void BotaoClicado(Button botao)
     {
-        if (!podeClicar || !botao.gameObject.activeSelf || desafioFinalizado) return;
+        if (!podeClicar || !botao.gameObject.activeSelf || desafioFinalizado || jaFinalizou) return;
+
 
         botao.interactable = false;
         bool acerto = botao.name == CorDaRodada;
@@ -285,8 +290,10 @@ public class DesafioDasCores : MonoBehaviour
             {
                 // Vitória - desativa cliques imediatamente
                 podeClicar = false;
+                jaFinalizou = true;
                 StartCoroutine(CompletarDesafio());
             }
+
             else if (acertosNaRodada >= cliquesParaProximaRodada)
             {
                 podeClicar = false;
@@ -317,8 +324,10 @@ public class DesafioDasCores : MonoBehaviour
             {
                 // Derrota - desativa cliques imediatamente
                 podeClicar = false;
+                jaFinalizou = true;
                 StartCoroutine(Derrota());
             }
+
         }
     }
 
@@ -462,6 +471,7 @@ public class DesafioDasCores : MonoBehaviour
         InvokeRepeating(nameof(EmbaralharBotoes), intervaloEmbaralhamento, intervaloEmbaralhamento);
     }
 
+
     private IEnumerator SuavizarDesaparecimento()
     {
         float dur = 0.4f;
@@ -480,6 +490,7 @@ public class DesafioDasCores : MonoBehaviour
 
     private IEnumerator CompletarDesafio()
     {
+
         desafioFinalizado = true;
         podeClicar = false;
         CancelInvoke(nameof(EmbaralharBotoes));
@@ -508,21 +519,16 @@ public class DesafioDasCores : MonoBehaviour
         // 2) Pisca verde por 4 segundos
         yield return StartCoroutine(PiscarBotoes(Color.green, 4f));
         telaVitoria.gameObject.SetActive(true);
-        yield return new WaitForSeconds(1.5f);
-        painelDoJogo.SetActive(false);
 
-        // Use a catraca armazenada em vez de encontrar por tag
-        yield return new WaitForSeconds(0.5f);
+        botaoFechar.gameObject.SetActive(true);
 
-        // Garanta que a catraca ainda existe
-        if (catracaClicada != null)
+        // Adiciona ação ao botão
+        botaoFechar.onClick.RemoveAllListeners(); // limpa eventos anteriores
+        botaoFechar.onClick.AddListener(() =>
         {
-            catracaClicada.MudarCorFinal(true);
-        }
-        else
-        {
-            Debug.LogWarning("Catraca clicada não encontrada!");
-        }
+            painelDoJogo.SetActive(false);
+            botaoFechar.gameObject.SetActive(false); // opcional: esconder o botão depois
+        });
 
         yield return null;
     }
@@ -547,22 +553,80 @@ public class DesafioDasCores : MonoBehaviour
         // 2) Pisca vermelho por 4 segundos
         yield return StartCoroutine(PiscarBotoes(Color.red, 4f));
         telaDerrota.gameObject.SetActive(true);
-        yield return new WaitForSeconds(1.5f);
-        painelDoJogo.SetActive(false);
 
-        yield return new WaitForSeconds(0.5f);
+        // Ativa o botão de Tentar Novamente e desativa o de Fechar
+        botaoTentarNovamente.gameObject.SetActive(true);
+        botaoFechar.gameObject.SetActive(false);
 
-        if (catracaClicada != null)
-        {
-            catracaClicada.MudarCorFinal(false);
-        }
-        else
-        {
-            Debug.LogWarning("Catraca clicada não encontrada!");
-        }
-
-        yield return null;
+        // Configura o botão Tentar Novamente
+        botaoTentarNovamente.onClick.RemoveAllListeners();
+        botaoTentarNovamente.onClick.AddListener(ReiniciarMinigame);
     }
+
+    // Crie esta nova função para reiniciar completamente o minigame:
+    public void ReiniciarMinigame()
+    {
+        // Desativa telas finais
+        jaFinalizou = false;
+        telaDerrota.gameObject.SetActive(false);
+        telaVitoria.gameObject.SetActive(false);
+        botaoTentarNovamente.gameObject.SetActive(false);
+        botaoFechar.gameObject.SetActive(false);
+
+        // Reseta todas as variáveis do jogo
+        desafioFinalizado = false;
+        errosCometidos = 0;
+        rodadaAtual = 0;
+        acertosNaRodada = 0;
+        tempoRestante = tempoTotal;
+        relogioAtivo = true;
+
+        // Reseta a UI
+        textoErros.text = $"Erros:  {errosCometidos} / {errosRodada}";
+        AtualizarTextoCliques();
+
+        // Reseta os textos
+        foreach (var t in textosDoCodigo)
+        {
+            t.color = Color.white;
+        }
+
+        // Reseta os botões
+        foreach (var botao in botoes)
+        {
+            botao.gameObject.SetActive(true);
+            botao.interactable = true;
+            botao.image.color = Color.white;
+        }
+
+        foreach (var borda in bordasDosBotoes)
+        {
+            borda.gameObject.SetActive(false);
+            borda.color = Color.white;
+        }
+
+        // Reseta as cores brilhantes
+        foreach (var borda in bordasBrilhantes)
+        {
+            borda.gameObject.SetActive(false);
+        }
+
+        // Reembaralha tudo
+        EmbaralharCoresInicialmente();
+        InicializarJogo();
+
+        // Reinicia a contagem do relógio
+        StopCoroutine(RelogioContagem());
+        StartCoroutine(RelogioContagem());
+
+        // Atualiza as cores no painel
+        for (int i = 0; i < imagensDasCores.Count; i++)
+        {
+            if (i < sequenciaCores.Count)
+                imagensDasCores[i].color = NomeParaCor(sequenciaCores[i]);
+        }
+    }
+
 
 
     //=========================//

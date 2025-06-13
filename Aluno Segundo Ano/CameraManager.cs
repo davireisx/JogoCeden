@@ -8,47 +8,76 @@ public class CameraManager : MonoBehaviour
     [Header("Configurações de Spawn")]
     public float delayAtivacaoSpawn = 1.5f;
 
-    [Header("Catraca1")]
+    [Header("Catraca1 - Number 1")]
     public float minX1;
     public float maxX1;
     public float minY1;
     public float maxY1;
     public AlunoSurgindo AlunosSpawns1;
 
-    [Header("Catraca2")]
+    [Header("Catraca2 - Number 2")]
     public float minX2;
     public float maxX2;
     public float minY2;
     public float maxY2;
-    // public AlunoSurgindo AlunosSpawns2;
 
-    [Header("Catraca3")]
+    [Header("Catraca3 - Number 3")]
     public float minX3;
     public float maxX3;
     public float minY3;
     public float maxY3;
     // public AlunoSurgindo AlunosSpawns3;
 
-    [Header("Catraca4")]
+    [Header("Catraca4 - Number 4")]
     public float minX4;
     public float maxX4;
     public float minY4;
     public float maxY4;
     public AlunoSurgindo AlunosSpawns4;
 
-    [Header("Corredor1")]
+    [Header("Corredor1 - Number 5")]
     public float minX5;
     public float maxX5;
     public float minY5;
     public float maxY5;
     public AlunoSurgindo AlunosSpawns5;
 
-    [Header("Corredor2")]
+    [Header("Corredor2 - Number 6")]
     public float minX6;
     public float maxX6;
     public float minY6;
     public float maxY6;
-    // public AlunoSurgindo AlunosSpawns6;
+    public AlunoSurgindo AlunosSpawns6;
+
+    [Header("Corredor3 - Number 7")]
+    public float minX7;
+    public float maxX7;
+    public float minY7;
+    public float maxY7;
+    public AlunoSurgindo AlunosSpawns7;
+
+    [Header("Corredor4 - Number 8")]
+    public float minX8;
+    public float maxX8;
+    public float minY8;
+    public float maxY8;
+    public AlunoSurgindo AlunosSpawns8;
+
+    //Loads Novos
+
+    [Header("Load1  - Number 9")]
+    public float minX9;
+    public float maxX9;
+    public float minY9;
+    public float maxY9;
+
+    [Header("Load2  - Number 10")]
+    public float minX10;
+    public float maxX10;
+    public float minY10;
+    public float maxY10;
+
+
 
     private void Start()
     {
@@ -106,7 +135,44 @@ public class CameraManager : MonoBehaviour
             cameraScript.globalMaxX = maxX6;
             cameraScript.globalMinY = minY6;
             cameraScript.globalMaxY = maxY6;
+            StartCoroutine(AtivarSpawnComDelay(AlunosSpawns6));
         }
+
+        else if (index == 7)
+        {
+            cameraScript.globalMinX = minX7;
+            cameraScript.globalMaxX = maxX7;
+            cameraScript.globalMinY = minY7;
+            cameraScript.globalMaxY = maxY7;
+            StartCoroutine(AtivarSpawnComDelay(AlunosSpawns7));
+        }
+
+        else if (index == 8)
+        {
+            cameraScript.globalMinX = minX8;
+            cameraScript.globalMaxX = maxX8;
+            cameraScript.globalMinY = minY8;
+            cameraScript.globalMaxY = maxY8;
+            StartCoroutine(AtivarSpawnComDelay(AlunosSpawns8));
+        }
+
+        else if (index == 9)
+        {
+            cameraScript.globalMinX = minX9;
+            cameraScript.globalMaxX = maxX9;
+            cameraScript.globalMinY = minY9;
+            cameraScript.globalMaxY = maxY9;
+        }
+
+        else if (index == 10)
+        {
+            cameraScript.globalMinX = minX10;
+            cameraScript.globalMaxX = maxX10;
+            cameraScript.globalMinY = minY10;
+            cameraScript.globalMaxY = maxY10;
+        }
+
+
     }
 
     private IEnumerator AtivarSpawnComDelay(AlunoSurgindo spawn)
@@ -121,6 +187,8 @@ public class CameraManager : MonoBehaviour
         AlunosSpawns1.enabled = false;
         AlunosSpawns4.enabled = false;
         AlunosSpawns5.enabled = false;
-
+        AlunosSpawns6.enabled = false;
+        AlunosSpawns7.enabled = false;
+        AlunosSpawns8.enabled = false;
     }
 }
