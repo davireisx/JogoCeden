@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 
-public class AlunoSegundoAno : MonoBehaviour
+public class Debora : MonoBehaviour
 {
 
     private Vector2 moveInput;
@@ -22,15 +22,11 @@ public class AlunoSegundoAno : MonoBehaviour
 
 
 
-    [Header("Movimenta√ß√£o do Jogador")]
+    [Header("MovimentaÁ„o do Jogador")]
     [SerializeField] private float moveSpeed;
     [SerializeField] private Joystick joystick;
 
     [Header("Sistema de Vida")]
-    [SerializeField] private int vidaMaxima = 3;
-    [SerializeField] private Image[] coracoesHUD;
-    [SerializeField] private Sprite coracaoCheio;
-    [SerializeField] private Sprite coracaoVazio;
     [SerializeField] private float tempoInvencivel = 1f;
     [SerializeField] private float intervaloPiscar = 0.15f;
 
@@ -57,10 +53,9 @@ public class AlunoSegundoAno : MonoBehaviour
         corOriginal = spriteRenderer.color;
 
         if (joystick == null)
-            Debug.LogError("Joystick n√£o est√° configurado!");
+            Debug.LogError("Joystick n„o est· configurado!");
 
-        vida = vidaMaxima;
-        AtualizarHUDVida();
+       
         InicializarCurvaKnockback();
     }
 
@@ -128,23 +123,13 @@ public class AlunoSegundoAno : MonoBehaviour
 
 
 
-    private void AtualizarHUDVida()
-    {
-        for (int i = 0; i < coracoesHUD.Length; i++)
-        {
-            coracoesHUD[i].sprite = i < vida ? coracaoCheio : coracaoVazio;
-            coracoesHUD[i].enabled = i < vidaMaxima;
-        }
-    }
+
 
     public void TomarDano(int dano)
     {
         if (!podeTomarDano) return;
 
-        vida = Mathf.Clamp(vida - dano, 0, vidaMaxima);
         audioDano.Play();
-        AtualizarHUDVida();
-        Debug.Log($"Vida: {vida}/{vidaMaxima}");
 
         if (vida <= 0)
             Morrer();
@@ -183,21 +168,19 @@ public class AlunoSegundoAno : MonoBehaviour
     private void Morrer()
     {
         Debug.Log("Jogador morreu!");
-        // Troca de cena ap√≥s um pequeno atraso (recomendado)
+        // Troca de cena apÛs um pequeno atraso (recomendado)
         StartCoroutine(MudarCenaAposMorte());
     }
 
     private IEnumerator MudarCenaAposMorte()
     {
-        yield return new WaitForSeconds(0.1f); // Tempo para mostrar anima√ß√£o ou som de morte
+        yield return new WaitForSeconds(0.1f); // Tempo para mostrar animaÁ„o ou som de morte
         SceneManager.LoadScene(telaGameOver); // Troque "GameOver" pelo nome exato da sua cena
     }
 
     public void RecuperarVida(int quantidade)
     {
-        vida = Mathf.Clamp(vida + quantidade, 0, vidaMaxima);
         audioVida.Play();
-        AtualizarHUDVida();
     }
 
     private IEnumerator AplicarKnockback(Vector2 direcao)
@@ -232,30 +215,22 @@ public class AlunoSegundoAno : MonoBehaviour
         }
     }
 
-private void OnTriggerEnter2D(Collider2D other)
-{
-    if (other.CompareTag("Enemy"))
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        dentroDoInimigo = true;
-        tempoParaProximoDano = 0f;
-
-        if (podeTomarDano) // <- Adiciona essa verifica√ß√£o
+        if (other.CompareTag("Enemy"))
         {
-            Vector2 direcao = (transform.position - other.transform.position).normalized;
-            StartCoroutine(AplicarKnockback(direcao));
-        }
-    }
+            dentroDoInimigo = true;
+            tempoParaProximoDano = 0f;
 
-    // Recuperar vida ao encostar em "Vida"
-    if (other.CompareTag("Vida"))
-    {
-        if (vida < vidaMaxima)
-        {
-            RecuperarVida(1);
-            Destroy(other.gameObject); // remove o item de vida da cena
+            if (podeTomarDano) // <- Adiciona essa verificaÁ„o
+            {
+                Vector2 direcao = (transform.position - other.transform.position).normalized;
+                StartCoroutine(AplicarKnockback(direcao));
+            }
         }
+
+        // Recuperar vida ao encostar em "Vida"
     }
-}
 
 
 
@@ -265,7 +240,7 @@ private void OnTriggerEnter2D(Collider2D other)
             dentroDoInimigo = false;
     }
 
-    // Acessores P√∫blicos
+    // Acessores P˙blicos
     public bool IsFacingLeft() => isFacingLeft;
     public bool IsMoving() => moveInput.magnitude > 0.1f;
     public void SetInput(Vector2 input) => moveInput = input;

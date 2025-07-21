@@ -10,6 +10,8 @@ public class AproximarCatraca : MonoBehaviour
     [SerializeField] private float raioInteracao = 2.5f;
     [SerializeField] private GameObject painelMinigame;
     [SerializeField] private DesafioDasCores desafioDasCores;
+    [SerializeField] private CatracaManager catracaManager;
+
 
     private Camera mainCam;
     private RectTransform botaoRect;
@@ -39,28 +41,37 @@ public class AproximarCatraca : MonoBehaviour
 
     void Update()
     {
-        // checa distância
         float dist = Vector3.Distance(jogador.position, transform.position);
+
+        // Oculta se estiver longe
         if (dist > raioInteracao)
         {
             botaoInteracao.gameObject.SetActive(false);
             return;
         }
 
-        // checa se deve ativar o botão baseado na cor
+        // Oculta se a catraca atual não deve ativar botão
         if (!catraca.DeveAtivarBotao())
         {
             botaoInteracao.gameObject.SetActive(false);
             return;
         }
 
-        // posiciona + ativa
+        // Oculta se ainda nem todas as catracas estão corrompidas
+        if (catracaManager == null || !catracaManager.TodasEstaoCorrompidas())
+        {
+            botaoInteracao.gameObject.SetActive(false);
+            return;
+        }
+
+        // Tudo OK, posiciona e mostra
         Vector3 screenPos = mainCam.WorldToScreenPoint(transform.position);
         botaoRect.position = screenPos + new Vector3(0, 50f, 0);
 
         if (!botaoInteracao.gameObject.activeSelf)
             botaoInteracao.gameObject.SetActive(true);
     }
+
 
     public void OnBotaoClicked()
     {

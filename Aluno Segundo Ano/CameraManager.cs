@@ -77,6 +77,13 @@ public class CameraManager : MonoBehaviour
     public float minY10;
     public float maxY10;
 
+    [Header("DS  - Number 11")]
+    public float minX11;
+    public float maxX11;
+    public float minY11;
+    public float maxY11;
+    public AlunoSurgindo AlunosSpawns11;
+
 
 
     private void Start()
@@ -172,8 +179,29 @@ public class CameraManager : MonoBehaviour
             cameraScript.globalMaxY = maxY10;
         }
 
+        else if (index == 11)
+        {
+            cameraScript.globalMinX = minX11;
+            cameraScript.globalMaxX = maxX11;
+            cameraScript.globalMinY = minY11;
+            cameraScript.globalMaxY = maxY11;
+            StartCoroutine(AtivarSpawnComDelay(AlunosSpawns11));
+        }
+
+        AtualizarSetas(index);
 
     }
+
+    private void AtualizarSetas(int cenarioAtual)
+    {
+        SetaDirecionalHUD[] todasSetas = Resources.FindObjectsOfTypeAll<SetaDirecionalHUD>(); // inclui objetos desativados
+
+        foreach (SetaDirecionalHUD seta in todasSetas)
+        {
+            seta.VerificarAtivacao(cenarioAtual);
+        }
+    }
+
 
     private IEnumerator AtivarSpawnComDelay(AlunoSurgindo spawn)
     {
@@ -190,5 +218,6 @@ public class CameraManager : MonoBehaviour
         AlunosSpawns6.enabled = false;
         AlunosSpawns7.enabled = false;
         AlunosSpawns8.enabled = false;
+        AlunosSpawns11.enabled = false;
     }
 }

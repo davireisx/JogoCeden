@@ -5,6 +5,16 @@ using UnityEngine.UI;
 
 public class Catraca : MonoBehaviour
 {
+    public enum Dificuldade { Facil, Medio, Dificil }
+
+    [Header("Dificuldade da catraca")]
+    public Dificuldade dificuldade;
+    private CatracaManager manager;
+
+    [Header("Texto de confirmação")]
+    [SerializeField] private GameObject textoCheck;
+
+
     [Header("Configurações Básicas")]
     [SerializeField] private Color corNormal;
     [SerializeField] private Color corCorrompida;
@@ -51,7 +61,11 @@ public class Catraca : MonoBehaviour
         corAtual = corNormal;
         spriteRenderer.color = corAtual;
         ficouCorrompidaAgora = false;
+
+        // IMPORTANTE: encontrar o CatracaManager
+        manager = FindObjectOfType<CatracaManager>();
     }
+
 
     public void MudarCorFinal(bool venceu)
     {
@@ -61,22 +75,25 @@ public class Catraca : MonoBehaviour
             StopCoroutine(efeitoDeCor);
         }
 
-        // Verifique se o spriteRenderer ainda existe, senão, retorne
-        if (spriteRenderer == null)
-        {
-            Debug.LogError("SpriteRenderer não encontrado na catraca!");
-            return;
-        }
-
         Color corPiscar = venceu ? corPiscadaVenceu : corPiscadaDerrota;
         Color corFinal = venceu ? corFinalVenceu : corFinalDerrota;
 
         // Reinicie a cor atual antes de começar a piscar
         spriteRenderer.color = corAtual;
 
-        // Inicie a corrotina de piscar
+        // Inicie a corrotina de piscar (ela mesma vai finalizar com a cor final)
         efeitoDeCor = StartCoroutine(PiscarCor(corPiscar, corFinal));
+
+        // Chama o manager após iniciar o efeito
+        if (manager != null)
+        {
+            if (venceu)
+                manager.CatracaResolvida(dificuldade);
+            else
+                manager.CatracaFalhou(dificuldade);
+        }
     }
+
 
     private IEnumerator PiscarCor(Color corPiscar, Color corFinal)
     {

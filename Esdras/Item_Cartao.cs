@@ -1,77 +1,160 @@
-using System.Collections;                 // Necessário para IEnumerator
 using UnityEngine;
-using UnityEngine.UI;                    // Necessário para usar Button e Image
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
+using System.Collections;
+using UnityEditor;
 
 public class ItemInteraction : MonoBehaviour
 {
-    public GameObject player;            // Referência ao jogador
-    public Button interactionButton;     // Botão de interação da UI
-    public Image initialImage;           // Imagem que aparece 3s depois
+    
 
-    public CartãoInteração cartaoInteracao; // arraste o GameObject com esse script no Inspector
+    [Header("Configurações")]
+    public Transform player;
+    public float range = 3f;
 
+    [Header("Joystick")]
+    public Image joystickImage; // Referência só à imagem do joystick
 
+    [Header("Setas")]
+    public GameObject seta1;
+    public GameObject seta2;
+
+    [Header("Referências Visuais")]
+    public GameObject hud;                   // Imagem que aparece após 3s
+    public GameObject quadrado1;
+    public GameObject quadrado2;
+    public GameObject check;
+    public CartãoInteração cartaoInteracao;      // Arraste o script no Inspector
+    public Color highlightColor = Color.yellow;  // Cor de brilho
+
+    [Header("Sprite")]
+    public SpriteRenderer spriteRenderer;        // Defina no Inspector
+
+    private Color originalColor;
     private bool playerInRange = false;
-    public float range = 3f;             // Range em forma de quadrado (ajustável)
+    private bool interactionComplete = false;
 
     void Start()
     {
-        interactionButton.gameObject.SetActive(false); // Esconde o botão no início
-        initialImage.gameObject.SetActive(false);      // Esconde a imagem no início
+        if (spriteRenderer != null)
+            originalColor = spriteRenderer.color;
+        else
+            Debug.LogWarning($"[{gameObject.name}] SpriteRenderer não atribuído!");
 
-        interactionButton.onClick.AddListener(OnInteractionButtonClicked); // Evento do botão
+        if (hud != null)
+            hud.gameObject.SetActive(false);
 
-        StartCoroutine(ShowImageAfterDelay()); // Começa a contagem de 3s
+        StartCoroutine(ShowImageAfterDelay());
+
+        if (player == null)
+            Debug.LogError("Player não atribuído!");
     }
 
     void Update()
     {
-        if (player != null)
+        VerificarDistancia();
+        AplicarBrilho();
+
+        if (interactionComplete) return;
+
+        // Clique no PC
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
-            Vector2 playerPos = player.transform.position;
-            Vector2 itemPos = transform.position;
+            Vector2 clickPos = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+            VerificarCliqueOuToque(clickPos);
+        }
 
-            bool isInX = Mathf.Abs(playerPos.x - itemPos.x) <= range;
-            bool isInY = Mathf.Abs(playerPos.y - itemPos.y) <= range;
-
-            if (isInX && isInY)
-            {
-                if (!playerInRange)
-                {
-                    playerInRange = true;
-                    interactionButton.gameObject.SetActive(true);
-                }
-            }
-            else
-            {
-                if (playerInRange)
-                {
-                    playerInRange = false;
-                    interactionButton.gameObject.SetActive(false);
-                }
-            }
+        // Toque no Mobile
+        if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
+        {
+            Vector2 touchPos = Camera.main.ScreenToWorldPoint(Touchscreen.current.primaryTouch.position.ReadValue());
+            VerificarCliqueOuToque(touchPos);
         }
     }
 
-    IEnumerator ShowImageAfterDelay()
-    {
-        yield return new WaitForSeconds(3f);
-        initialImage.gameObject.SetActive(true);
-    }
-
-    void OnInteractionButtonClicked()
-    {
-        Destroy(gameObject);                         // Destroi o item
-        interactionButton.gameObject.SetActive(false); // Oculta o botão
-        initialImage.gameObject.SetActive(false);      // Oculta a imagem
-        cartaoInteracao.interactionRange = 7f;
-    }
-
-    void OnDrawGizmos()
+    void VerificarDistancia()
     {
         if (player == null) return;
 
+        float distance = Vector2.Distance(transform.position, player.position);
+        playerInRange = distance <= range;
+    }
+
+    void AplicarBrilho()
+    {
+        if (spriteRenderer == null) return;
+
+        if (playerInRange && !interactionComplete)
+        {
+            float pulse = Mathf.PingPong(Time.time * 2f, 1f);
+            spriteRenderer.color = Color.Lerp(originalColor, highlightColor, pulse);
+        }
+        else
+        {
+            spriteRenderer.color = originalColor;
+        }
+    }
+
+    void VerificarCliqueOuToque(Vector2 worldPos)
+    {
+        if (!playerInRange || interactionComplete) return;
+
+        RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
+        if (hit.collider != null && hit.collider.gameObject == this.gameObject)
+        {
+            Interagir();
+        }
+    }
+
+    void Interagir()
+    {
+        interactionComplete = true;
+
+        seta1.gameObject.SetActive(false);
+        seta2.gameObject.SetActive(true);
+
+        if (cartaoInteracao != null)
+            cartaoInteracao.interactionRange = 7f;
+
+        if (joystickImage != null)
+            joystickImage.enabled = false; // Apenas oculta a imagem visual
+
+
+        check.gameObject.SetActive(true);
+
+
+        StartCoroutine(ExecutarCheckComDelay());
+
+    }
+
+    IEnumerator ExecutarCheckComDelay()
+    {
+        check.gameObject.SetActive(true);
+
+        // Aguarda 1.5 segundos (você pode ajustar o tempo)
+        yield return new WaitForSeconds(0.5f);
+
+        if (check != null)
+            check.gameObject.SetActive(false);
+
+        if (quadrado1 != null)
+            quadrado1.gameObject.SetActive(false);
+
+        if (quadrado2 != null)
+            quadrado2.gameObject.SetActive(true);
+
+        gameObject.SetActive(false);
+    }
+    IEnumerator ShowImageAfterDelay()
+    {
+        yield return new WaitForSeconds(0f);
+        if (hud != null)
+            hud.gameObject.SetActive(true);
+    }
+
+    void OnDrawGizmosSelected()
+    {
         Gizmos.color = Color.green;
-        Gizmos.DrawWireCube(transform.position, new Vector3(range * 2, range * 2, 0));
+        Gizmos.DrawWireSphere(transform.position, range);
     }
 }

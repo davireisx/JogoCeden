@@ -1,63 +1,137 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
+using System.Collections;
 
 public class CartãoInteração : MonoBehaviour
 {
-    public float interactionRange = 0;
+    [Header("Configurações")]
+    public float interactionRange = 3f;
+    public Transform player;
+    public Arquiteto ativarMovimento;
 
-    public GameObject interactionButton;       // Botão de interação
-    public Transform player;                   // Referência ao jogador
-
-    public GameObject objetoParaDesativar1;    // Primeiro objeto a ser desativado
-    public GameObject objetoParaDesativar2;    // Segundo objeto a ser desativado
+    [Header("Ações de Interação")]
+    public GameObject objetoParaDesativar1;
+    public GameObject objetoParaDesativar2;
     public GameObject cartaoAtiva;
     public GameObject cartaoDesativa;
 
-    private bool foiClicado = false;           // Flag para saber se já clicou
+    [Header("Textos")]
+    public GameObject fundo1;
+    public GameObject fundo2;
+    public GameObject check;
 
-    private void Start()
+    [Header("Joystick")]
+    public Image joystickImage;
+
+    [Header("Brilho")]
+    public SpriteRenderer spriteRenderer;
+    public Color highlightColor = Color.yellow;
+
+    private Color originalColor;
+    private bool foiClicado = false;
+    private bool playerInRange = false;
+
+    void Start()
     {
-        interactionButton.SetActive(false); // Esconde o botão no início
+        if (spriteRenderer != null)
+            originalColor = spriteRenderer.color;
+        else
+            Debug.LogWarning($"[{gameObject.name}] SpriteRenderer não atribuído!");
 
-        // Adiciona o evento do botão
-        Button btn = interactionButton.GetComponent<Button>();
-        if (btn != null)
+        if (player == null)
+            Debug.LogError("Player não atribuído!");
+    }
+
+    void Update()
+    {
+        if (foiClicado || player == null) return;
+
+        float distance = Vector2.Distance(transform.position, player.position);
+        playerInRange = distance <= interactionRange;
+
+        AplicarBrilho();
+
+        // Clique com mouse
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
-            btn.onClick.AddListener(AoClicarBotao);
+            Vector2 clickPos = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+            VerificarCliqueOuToque(clickPos);
+        }
+
+        // Toque em mobile
+        if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
+        {
+            Vector2 touchPos = Camera.main.ScreenToWorldPoint(Touchscreen.current.primaryTouch.position.ReadValue());
+            VerificarCliqueOuToque(touchPos);
         }
     }
 
-    private void Update()
+    void VerificarCliqueOuToque(Vector2 worldPos)
     {
-        if (player == null || foiClicado) return; // Se já clicou, não faz mais nada
+        if (!playerInRange || foiClicado) return;
 
-        float distance = Vector2.Distance(transform.position, player.position);
-
-        if (distance <= interactionRange)
+        RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
+        if (hit.collider != null && hit.collider.gameObject == this.gameObject)
         {
-            interactionButton.SetActive(true);
+            Interagir();
+        }
+    }
+
+    void Interagir()
+    {
+
+        foiClicado = true;
+        interactionRange = 0f;
+
+        joystickImage.enabled = false;
+        objetoParaDesativar1?.SetActive(false);
+        objetoParaDesativar2?.SetActive(false);
+        cartaoAtiva?.SetActive(true);
+        ativarMovimento.IniciarMovimento();
+
+
+        StartCoroutine(ExecutarCheckComDelay());
+    }
+
+
+    IEnumerator ExecutarCheckComDelay()
+    {
+        if (check != null)
+            check.gameObject.SetActive(true);
+
+        // Aguarda 1.5 segundos (você pode ajustar o tempo)
+        yield return new WaitForSeconds(1.5f);
+
+        if (check != null)
+            check.gameObject.SetActive(false);
+
+        if (fundo1 != null)
+            fundo1.gameObject.SetActive(false);
+
+        if (fundo2 != null)
+            fundo2.gameObject.SetActive(true);
+    }
+
+
+    void AplicarBrilho()
+    {
+        if (spriteRenderer == null) return;
+
+        if (playerInRange && !foiClicado)
+        {
+            float pulse = Mathf.PingPong(Time.time * 2f, 1f);
+            spriteRenderer.color = Color.Lerp(originalColor, highlightColor, pulse);
         }
         else
         {
-            interactionButton.SetActive(false);
+            spriteRenderer.color = originalColor;
         }
     }
 
-    private void AoClicarBotao()
-    {
-        interactionButton.SetActive(false);    // Esconde o botão
-        interactionRange = 0f;                 // Zera o alcance
-        foiClicado = true;                     // Marca como clicado
-        objetoParaDesativar1.SetActive(false);
-        objetoParaDesativar2.SetActive(false);
-        cartaoAtiva.SetActive(true);
-        cartaoDesativa.SetActive(false);
-    }
-
-    private void OnDrawGizmosSelected()
+    void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.cyan;
-        Vector3 size = new Vector3(interactionRange * 2, interactionRange * 2, 0f);
-        Gizmos.DrawWireCube(transform.position, size);
+        Gizmos.DrawWireSphere(transform.position, interactionRange);
     }
 }

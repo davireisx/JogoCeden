@@ -14,7 +14,7 @@ public class RaioQueroQuero : MonoBehaviour
     private bool atingiuAlvo = false;
     private Animator animator;
     private QueroQuero queroQuero;
-    private Collider2D collider2D;
+    private Collider2D coll;
 
     public void SetQueroQuero(QueroQuero qq)
     {
@@ -24,7 +24,7 @@ public class RaioQueroQuero : MonoBehaviour
     private void Start()
     {
         animator = GetComponent<Animator>();
-        collider2D = GetComponent<Collider2D>();
+        coll = GetComponent<Collider2D>();
 
         GameObject jogador = GameObject.FindGameObjectWithTag("Player");
         if (jogador != null)
@@ -105,9 +105,9 @@ public class RaioQueroQuero : MonoBehaviour
         }
 
         // Desativa o collider para evitar múltiplos hits
-        if (collider2D != null)
+        if (coll != null)
         {
-            collider2D.enabled = false;
+            coll.enabled = false;
         }
     }
 

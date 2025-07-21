@@ -8,36 +8,36 @@ public class CameraManagerEsdras : MonoBehaviour
     [Header("Configurações de Spawn")]
     public float delayAtivacaoSpawn = 1.5f;
 
-    [Header("Museu/Fora")]
+    [Header("Cenário 1")]
     public float minX1;
     public float maxX1;
     public float minY1;
     public float maxY1;
 
-    [Header("Museu/Sala1")]
+    [Header("Cenário 2")]
     public float minX2;
     public float maxX2;
     public float minY2;
     public float maxY2;
 
-    [Header("Museu/Sala2")]
+    [Header("Cenário 3")]
     public float minX3;
     public float maxX3;
     public float minY3;
     public float maxY3;
 
 
-    [Header("Museu - Portal")]
+    [Header("Cenário 4")]
      public float minX4;
      public float maxX4;
      public float minY4;
      public float maxY4;
 
-    //[Header("Corredor1 - Number 5")]
-    //public float minX5;
-    //public float maxX5;
-    //public float minY5;
-    //public float maxY5;
+    [Header("Cenário 5")]
+    public float minX5;
+    public float maxX5;
+    public float minY5;
+    public float maxY5;
 
     //[Header("Corredor2 - Number 6")]
     //public float minX6;
@@ -118,6 +118,15 @@ public class CameraManagerEsdras : MonoBehaviour
             cameraScript.globalMinY = minY4 + offsetY;
             cameraScript.globalMaxY = maxY4 + offsetY;
         }
+
+        else if (index == 5)
+        {
+            cameraScript.globalMinX = minX5 + offsetX;
+            cameraScript.globalMaxX = maxX5 + offsetX;
+            cameraScript.globalMinY = minY5 + offsetY;
+            cameraScript.globalMaxY = maxY5 + offsetY;
+        }
+
     }
 
 
