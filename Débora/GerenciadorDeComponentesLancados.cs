@@ -4,6 +4,8 @@ using System.Collections.Generic;
 public class GerenciadorDeComponentesLancados : MonoBehaviour
 {
     public ComponenteLancado[] componentes;
+    public GameObject joystick; 
+    public GameObject hud; // atribua via Inspector
 
     private List<ComponenteLancado> chegaram = new List<ComponenteLancado>();
 
@@ -14,11 +16,19 @@ public class GerenciadorDeComponentesLancados : MonoBehaviour
 
         if (chegaram.Count == componentes.Length)
         {
-            Debug.Log("? TODOS os componentes chegaram. Iniciando piscada.");
-            foreach (var c in componentes)
-            {
-                c.AtivarPiscada();
-            }
+            Debug.Log("? TODOS os componentes chegaram. Liberando joystick.");
+
+            if (joystick != null)
+                joystick.SetActive(true);
+        }
+    }
+
+    public void AtivarPiscadas()
+    {
+        foreach (var c in componentes)
+        {
+            c.AtivarPiscada();
         }
     }
 }
+
