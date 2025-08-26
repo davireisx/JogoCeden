@@ -18,10 +18,45 @@ public class FiacaoRoboInvertido : MonoBehaviour
     public float tempoEntreFios = 0.5f;
     public float duracaoAnimacao = 0.5f;
 
+    [Header("Referência da luz")]
+    public GameObject lightObject; // Arraste sua luz aqui no Inspector
+
     private void Start()
     {
+        // Luz começa sempre ligada
+        if (lightObject != null)
+            lightObject.SetActive(true);
+
         StartCoroutine(AnimarFiosSequencialmente());
     }
+
+    private void Update()
+    {
+        if (lightObject == null)
+            return;
+
+        // Se algum fio estiver fora do destino, desativa a luz
+        if (!TodosFiosNoDestino() && lightObject.activeSelf)
+        {
+            Debug.Log("aquii");
+            lightObject.SetActive(false);
+        }
+    }
+
+
+    private bool TodosFiosNoDestino()
+    {
+        foreach (var fioData in fiosSequenciais)
+        {
+            if (fioData.fio == null) continue;
+
+            // Usa o estado de conexão, não só a posição
+            if (!fioData.fio.EstaNoDestinoCorreto())
+                return false;
+        }
+        return true;
+    }
+
 
     private IEnumerator AnimarFiosSequencialmente()
     {
@@ -34,23 +69,15 @@ public class FiacaoRoboInvertido : MonoBehaviour
 
     private IEnumerator EsticarFio(WireDragComLimite fio, Transform destino)
     {
-        // Validação reforçada
         if (!ValidarComponentes(fio, destino)) yield break;
 
-        // Obter referências
         var (pontoFixo, holderVisual, parteVisual, pontaFinal) = GetComponentes(fio);
 
-        // Configuração inicial
         SetupInicial(fio, destino, pontoFixo, holderVisual);
-
-        // Animação principal
         yield return AnimacaoPrincipal(fio, destino, pontoFixo, holderVisual, parteVisual, pontaFinal);
-
-        // Finalização precisa
         FinalizarAnimacao(fio, destino, pontoFixo, holderVisual, parteVisual, pontaFinal);
     }
 
-    // Métodos auxiliares
     private bool ValidarComponentes(WireDragComLimite fio, Transform destino)
     {
         if (fio == null || destino == null || fio.pontoFixo == null ||
@@ -89,7 +116,6 @@ public class FiacaoRoboInvertido : MonoBehaviour
             tempo += Time.deltaTime;
             float progresso = Mathf.Clamp01(tempo / duracaoAnimacao);
 
-            // Atualização sincronizada
             AtualizarComponentes(progresso, distanciaInicial, distanciaFinal, larguraVisual,
                                pontoFixo, holderVisual, parteVisual, pontaFinal, destino);
 
@@ -101,33 +127,21 @@ public class FiacaoRoboInvertido : MonoBehaviour
        float larguraVisual, Transform pontoFixo, Transform holderVisual,
        SpriteRenderer parteVisual, Transform pontaFinal, Transform destino)
     {
-        // Calcula o comprimento atual em mundo (distância linear)
         float comprimentoMundo = Mathf.Lerp(distanciaInicial, distanciaFinal, progresso);
-
-        // Calcula a direção do fio no mundo
         Vector3 direcaoMundo = (destino.position - pontoFixo.position).normalized;
-
-        // Transforma a posição final para o espaço local do holderVisual
         Vector3 posicaoFinalLocal = holderVisual.InverseTransformPoint(pontoFixo.position + direcaoMundo * comprimentoMundo);
-
-        // Usa o componente X do espaço local para ajustar o tamanho
         float comprimentoLocal = Mathf.Max(posicaoFinalLocal.x, 0.1f);
 
-        // Atualiza o tamanho local do sprite
         parteVisual.size = new Vector2(comprimentoLocal, larguraVisual);
 
-        // Atualiza a posição local da ponta para coincidir com o final do sprite
         if (pontaFinal != null)
             pontaFinal.localPosition = new Vector3(comprimentoLocal, 0f, 0f);
 
-        // Opcional: debug visual para conferir no mundo
         Debug.DrawLine(pontoFixo.position, pontoFixo.position + direcaoMundo * comprimentoMundo, Color.Lerp(Color.yellow, Color.green, progresso), 0.1f);
     }
 
-
-
     private void FinalizarAnimacao(WireDragComLimite fio, Transform destino,
-     Transform pontoFixo, Transform holderVisual, SpriteRenderer parteVisual, Transform pontaFinal)
+        Transform pontoFixo, Transform holderVisual, SpriteRenderer parteVisual, Transform pontaFinal)
     {
         if (pontaFinal != null)
             pontaFinal.position = destino.position;
@@ -135,6 +149,9 @@ public class FiacaoRoboInvertido : MonoBehaviour
         fio.SincronizarVisualComPontaFinal();
         fio.ConectarAutomaticamente(destino);
 
+        // ?? Verifica se todos estão no destino correto após conectar
+        if (TodosFiosNoDestino() && lightObject != null)
+            lightObject.SetActive(true);
     }
 
 }

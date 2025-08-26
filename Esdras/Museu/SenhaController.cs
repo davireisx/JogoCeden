@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,20 +14,33 @@ public class SenhaController : MonoBehaviour
     public GameObject imagemFechadura;
     public GameObject fechar;
     public GameObject joystick;
-    public GameObject hud; // HUD geral (vida, mapa, inventário, etc)
+    public GameObject hud; // HUD geral
     public GameObject objetivos1;
     public GameObject objetivos2;
-
+    public Text checkText;
 
     [Header("Feedback")]
-    public GameObject textoCheck; // Referência ao GameObject que exibe o "CHECK"
-
+    public GameObject textoCheck; // "CHECK"
     private CanvasGroup fadeCanvasGroup;
+
+    [System.Serializable]
+    public class ConfiguracaoDigito
+    {
+        public Button botao;               // Botão do dígito
+        public Text texto;                 // Texto dentro do botão
+        public Color corFeedback = Color.green;
+        public AudioClip somClique;
+    }
+
+    [Header("Configuração de cada dígito")]
+    public List<ConfiguracaoDigito> configuracoes = new List<ConfiguracaoDigito>();
+    public AudioSource audioSource;
 
     [Header("Senha")]
     public string senhaCorreta;
     private string codigoDigitado = "";
     public int limiteDigitos = 4;
+    public float escalaPlayer = 0.68f;
 
     [Header("Teleportação")]
     public Transform jogador;
@@ -34,26 +48,94 @@ public class SenhaController : MonoBehaviour
 
     private bool bloqueado = false;
 
+    // Controle de feedback para cada botão
+    private Dictionary<Button, Coroutine> feedbacks = new Dictionary<Button, Coroutine>();
+
     void Start()
     {
         AtualizarVisor();
 
+        // Configura os listeners de clique para cada botão
+        foreach (var cfg in configuracoes)
+        {
+            if (cfg.botao != null)
+            {
+                cfg.botao.onClick.AddListener(() => OnBotaoClicado(cfg));
+            }
+        }
+
+
+        if (joystick != null)
+            joystick.SetActive(false);
+
+        if (checkText != null)
+            checkText.gameObject.SetActive(false);
+
         if (fadePanel != null)
         {
             fadeCanvasGroup = fadePanel.GetComponent<CanvasGroup>();
-            fadeCanvasGroup.alpha = 0f; // começa invisível
+            fadeCanvasGroup.alpha = 0f;
         }
     }
 
-    public void DigitarNumero(string numero)
+    private void OnBotaoClicado(ConfiguracaoDigito cfg)
+    {
+        if (bloqueado) return;
+
+        string valor = cfg.texto.text;
+
+        // Feedback visual e sonoro
+        if (!feedbacks.ContainsKey(cfg.botao) || feedbacks[cfg.botao] == null)
+            StartCoroutine(FeedbackDigito(cfg));
+
+        // Se for número (0-9), adiciona
+        if (char.IsDigit(valor, 0))
+        {
+            DigitarNumero(valor);
+        }
+        // Se for apagar
+        else if (valor == "←")
+        {
+            Apagar();
+        }
+        // Se for OK
+        else if (valor == "OK")
+        {
+            ValidarSenha();
+        }
+    }
+
+
+    private void DigitarNumero(string numero)
     {
         if (bloqueado) return;
 
         if (codigoDigitado.Length < limiteDigitos)
         {
-            codigoDigitado += numero;
+            codigoDigitado += numero[0]; // Adiciona apenas o primeiro caractere
             AtualizarVisor();
         }
+    }
+
+
+    private IEnumerator FeedbackDigito(ConfiguracaoDigito cfg)
+    {
+        if (cfg.somClique != null && audioSource != null)
+            audioSource.PlayOneShot(cfg.somClique);
+
+        Color corOriginal = cfg.texto.color;
+        cfg.texto.color = cfg.corFeedback;
+
+        // Armazena coroutine para evitar reentrada
+        feedbacks[cfg.botao] = StartCoroutine(ResetarCor(cfg, corOriginal));
+        yield return feedbacks[cfg.botao];
+    }
+
+    private IEnumerator ResetarCor(ConfiguracaoDigito cfg, Color corOriginal)
+    {
+        yield return new WaitForSeconds(0.2f); // Intervalo do feedback
+        cfg.texto.color = corOriginal;
+        feedbacks[cfg.botao] = null; // Libera para novo clique
     }
 
     public void Apagar()
@@ -84,21 +166,21 @@ public class SenhaController : MonoBehaviour
 
     private void AtualizarVisor()
     {
-        string texto = "";
+        // Sempre mostra 4 posições
+        char[] display = new char[limiteDigitos];
 
-        for (int i = 0; i < codigoDigitado.Length; i++)
+        for (int i = 0; i < limiteDigitos; i++)
         {
-            texto += "  " + codigoDigitado[i] + "  ";
+            if (i < codigoDigitado.Length)
+                display[i] = codigoDigitado[i];
+            else
+                display[i] = '*';
         }
 
-        int asteriscosRestantes = limiteDigitos - codigoDigitado.Length;
-        for (int i = 0; i < asteriscosRestantes; i++)
-        {
-            texto += "  *  ";
-        }
-
-        visor.text = texto.TrimEnd();
+        // Monta a string final do visor
+        visor.text = $"{display[0]}  {display[1]}  {display[2]}  {display[3]}";
     }
+
 
     private IEnumerator Erro()
     {
@@ -106,17 +188,17 @@ public class SenhaController : MonoBehaviour
 
         for (int i = 0; i < 4; i++)
         {
-            visor.text = "";
+            visor.text = " ";
             yield return new WaitForSeconds(0.15f);
 
             AtualizarVisor();
             yield return new WaitForSeconds(0.15f);
         }
 
-        visor.text = "   E R R 0 R";
+        visor.text = "  E  R  R  0  R";
         yield return new WaitForSeconds(1f);
 
-        codigoDigitado = "";
+        codigoDigitado = " ";
         AtualizarVisor();
         bloqueado = false;
     }
@@ -125,72 +207,41 @@ public class SenhaController : MonoBehaviour
     {
         bloqueado = true;
 
-        if (fechar != null)
-            fechar.SetActive(false);
+        if (fechar != null) fechar.SetActive(false);
+        if (imagemFechadura != null) imagemFechadura.SetActive(false);
+        if (hud != null) hud.SetActive(true);
+        if (textoCheck != null) textoCheck.SetActive(true);
 
-        if (imagemFechadura != null)
-            imagemFechadura.SetActive(false);
-
-        if (hud != null)
-            hud.SetActive(true); // <-- HUD fica visível aqui
-
-
-        // Ativa o texto "CHECK"
-        if (textoCheck != null)
-            textoCheck.SetActive(true);
-
-        // Espera 1 segundo antes de continuar
         yield return new WaitForSeconds(1f);
 
+        if (hud != null) hud.SetActive(false);
+        if (textoCheck != null) textoCheck.SetActive(false);
 
-        if (hud != null)
-            hud.SetActive(false);
-
-        if (textoCheck != null)
-            textoCheck.SetActive(false);
-
-
-        // Fade in
         if (fadeCanvasGroup != null)
             yield return StartCoroutine(Fade(0f, 1.5f, 1.5f));
 
-
-        // Teleporta jogador
         if (jogador != null && spawnPoint != null)
         {
             jogador.position = spawnPoint.position;
-            jogador.localScale = new Vector3(0.6f, 0.6f, jogador.localScale.z);
+            jogador.localScale = new Vector3(escalaPlayer, escalaPlayer, jogador.localScale.z);
             jogador.position = new Vector3(spawnPoint.position.x, spawnPoint.position.y, 0f);
-
         }
 
-
-        // Altera a câmera
         if (cameraManager != null)
             cameraManager.SetScenarioBounds(2);
 
-        // Fade out
         if (fadeCanvasGroup != null)
             yield return StartCoroutine(Fade(1.5f, 0f, 1.5f));
 
-        if (joystick != null)
-            joystick.SetActive(true);
-
-        if (hud != null)
-            hud.SetActive(true);
-
-        if (objetivos1 != null)
-            objetivos1.SetActive(false);
-
-        if (objetivos2 != null)
-            objetivos2.SetActive(true);
-
+        if (joystick != null) joystick.SetActive(true);
+        if (hud != null) hud.SetActive(true);
+        if (objetivos1 != null) objetivos1.SetActive(false);
+        if (objetivos2 != null) objetivos2.SetActive(true);
 
         codigoDigitado = "";
         bloqueado = false;
         AtualizarVisor();
     }
-
 
     private IEnumerator Fade(float startAlpha, float endAlpha, float duration)
     {

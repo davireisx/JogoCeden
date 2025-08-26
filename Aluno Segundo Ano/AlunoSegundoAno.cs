@@ -3,16 +3,16 @@ using System.Collections;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
-
 public class AlunoSegundoAno : MonoBehaviour
 {
-
     private Vector2 moveInput;
     private Vector2 ultimaDirecao = Vector2.down;
     private Vector2 direcaoAnterior = Vector2.zero;
     private bool isFacingLeft = false;
-    private bool inputLocked = false;
+
+    private bool inputLocked = false;          // usado no knockback
     private float inputLockTimer = 0f;
+    private bool bloqueioInteracao = false;    // NOVO: bloqueia leitura do joystick durante interação
 
     private Rigidbody2D rb;
     private int vida;
@@ -20,10 +20,8 @@ public class AlunoSegundoAno : MonoBehaviour
     private bool dentroDoInimigo = false;
     private float tempoParaProximoDano = 0f;
 
-
-
     [Header("Movimentação do Jogador")]
-    [SerializeField] private float moveSpeed;
+    [SerializeField] private float moveSpeed = 4f;
     [SerializeField] private Joystick joystick;
 
     [Header("Sistema de Vida")]
@@ -66,10 +64,26 @@ public class AlunoSegundoAno : MonoBehaviour
 
     private void Update()
     {
-        moveInput = new Vector2(joystick.Horizontal, joystick.Vertical);
+        // Liberação automática do lock do knockback
+        if (inputLocked)
+        {
+            inputLockTimer -= Time.deltaTime;
+            if (inputLockTimer <= 0f)
+                inputLocked = false;
+        }
 
-        if (moveInput.magnitude > 0.1f)
-            direcaoAnterior = moveInput.normalized;
+        // Se estiver em interação ou com input travado, NÃO ler o joystick
+        if (bloqueioInteracao || inputLocked)
+        {
+            moveInput = Vector2.zero;
+        }
+        else
+        {
+            moveInput = new Vector2(joystick.Horizontal, joystick.Vertical);
+
+            if (moveInput.magnitude > 0.1f)
+                direcaoAnterior = moveInput.normalized;
+        }
 
         VerificarContatoComInimigo();
         anim.SetBool("walking", moveInput.magnitude > 0.1f);
@@ -82,13 +96,12 @@ public class AlunoSegundoAno : MonoBehaviour
         HandleMovement();
     }
 
-
     private void HandleMovement()
     {
-        if (inputLocked)
+        if (inputLocked || bloqueioInteracao)
         {
-            inputLockTimer -= Time.deltaTime;
-            if (inputLockTimer <= 0f) inputLocked = false;
+            // garante parada total
+            rb.linearVelocity = Vector2.zero;
             return;
         }
 
@@ -99,10 +112,12 @@ public class AlunoSegundoAno : MonoBehaviour
             float inputModulado = Mathf.Pow(suavizacao, 1.5f); // curva exponencial
             Vector2 direcaoFinal = moveInput.normalized * inputModulado;
             rb.MovePosition(rb.position + direcaoFinal * moveSpeed * Time.fixedDeltaTime);
-
+        }
+        else
+        {
+            rb.linearVelocity = Vector2.zero;
         }
     }
-
 
     private void FlipCharacter()
     {
@@ -126,8 +141,6 @@ public class AlunoSegundoAno : MonoBehaviour
         }
     }
 
-
-
     private void AtualizarHUDVida()
     {
         for (int i = 0; i < coracoesHUD.Length; i++)
@@ -142,7 +155,7 @@ public class AlunoSegundoAno : MonoBehaviour
         if (!podeTomarDano) return;
 
         vida = Mathf.Clamp(vida - dano, 0, vidaMaxima);
-        audioDano.Play();
+        if (audioDano) audioDano.Play();
         AtualizarHUDVida();
         Debug.Log($"Vida: {vida}/{vidaMaxima}");
 
@@ -183,20 +196,19 @@ public class AlunoSegundoAno : MonoBehaviour
     private void Morrer()
     {
         Debug.Log("Jogador morreu!");
-        // Troca de cena após um pequeno atraso (recomendado)
         StartCoroutine(MudarCenaAposMorte());
     }
 
     private IEnumerator MudarCenaAposMorte()
     {
-        yield return new WaitForSeconds(0.1f); // Tempo para mostrar animação ou som de morte
-        SceneManager.LoadScene(telaGameOver); // Troque "GameOver" pelo nome exato da sua cena
+        yield return new WaitForSeconds(0.1f);
+        SceneManager.LoadScene(telaGameOver);
     }
 
     public void RecuperarVida(int quantidade)
     {
         vida = Mathf.Clamp(vida + quantidade, 0, vidaMaxima);
-        audioVida.Play();
+        if (audioVida) audioVida.Play();
         AtualizarHUDVida();
     }
 
@@ -232,32 +244,29 @@ public class AlunoSegundoAno : MonoBehaviour
         }
     }
 
-private void OnTriggerEnter2D(Collider2D other)
-{
-    if (other.CompareTag("Enemy"))
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        dentroDoInimigo = true;
-        tempoParaProximoDano = 0f;
-
-        if (podeTomarDano) // <- Adiciona essa verificação
+        if (other.CompareTag("Enemy"))
         {
-            Vector2 direcao = (transform.position - other.transform.position).normalized;
-            StartCoroutine(AplicarKnockback(direcao));
+            dentroDoInimigo = true;
+            tempoParaProximoDano = 0f;
+
+            if (podeTomarDano)
+            {
+                Vector2 direcao = (transform.position - other.transform.position).normalized;
+                StartCoroutine(AplicarKnockback(direcao));
+            }
+        }
+
+        if (other.CompareTag("Vida"))
+        {
+            if (vida < vidaMaxima)
+            {
+                RecuperarVida(1);
+                Destroy(other.gameObject);
+            }
         }
     }
-
-    // Recuperar vida ao encostar em "Vida"
-    if (other.CompareTag("Vida"))
-    {
-        if (vida < vidaMaxima)
-        {
-            RecuperarVida(1);
-            Destroy(other.gameObject); // remove o item de vida da cena
-        }
-    }
-}
-
-
 
     private void OnTriggerExit2D(Collider2D other)
     {
@@ -265,15 +274,51 @@ private void OnTriggerEnter2D(Collider2D other)
             dentroDoInimigo = false;
     }
 
-    // Acessores Públicos
+    // ==== Acessores / Controles de interação ====
     public bool IsFacingLeft() => isFacingLeft;
     public bool IsMoving() => moveInput.magnitude > 0.1f;
     public void SetInput(Vector2 input) => moveInput = input;
     public Vector2 GetCurrentInput() => moveInput;
 
-    public void TeleportarPara(Vector2 novaPosicao)
+    public void TeleportarPara(Vector2 novaPosicao) => transform.position = novaPosicao;
+
+    public void PararMovimento()
     {
-        transform.position = novaPosicao;
+        moveInput = Vector2.zero;
+        if (anim) anim.SetBool("walking", false);
+        rb.linearVelocity = Vector2.zero;       // IMPORTANTE: usar velocity no Rigidbody2D
+        rb.angularVelocity = 0f;
+    }
+
+    public void LiberarMovimento()
+    {
+        // libera QUALQUER bloqueio
+        bloqueioInteracao = false;   // <- ESSENCIAL
+        //inputLocked = false;
+        //inputLockTimer = 0f;
+
+        // limpa estados para recomeçar sem “arrasto”
+        moveInput = Vector2.zero;
+        direcaoAnterior = Vector2.zero;
+
+        rb.linearVelocity = Vector2.zero;
+        if (anim) anim.SetBool("walking", false);
+        //rb.linearVelocity = Vector2.zero;
+        //rb.angularVelocity = 0f;
+    }
+
+
+
+    // NOVO: chamados pela UI/Interação
+    public void ComecarInteracao()
+    {
+        bloqueioInteracao = true;
+        PararMovimento();
+    }
+
+    public void TerminarInteracao()
+    {
+        LiberarMovimento();
     }
 
 }

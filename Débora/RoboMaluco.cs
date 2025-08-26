@@ -11,7 +11,7 @@ public class RoboMaluco : MonoBehaviour
         public ComponenteLancado[] componentes;
     }
 
-    [Header("Configurações Básicas")]
+    [Header("Configura??es B?sicas")]
     public Transform[] waypoints;
     public float moveSpeed = 2f;
     public float waitTimeAtWaypoint = 0.5f;
@@ -19,7 +19,7 @@ public class RoboMaluco : MonoBehaviour
     [Header("Waves de Componentes")]
     public Wave[] waves;
 
-    [Header("Referências")]
+    [Header("Refer?ncias")]
     public GerenciadorDeComponentesLancados gerenciador;
 
     private Animator animator;
@@ -35,7 +35,7 @@ public class RoboMaluco : MonoBehaviour
     {
         animator = GetComponent<Animator>();
 
-        // Ativa os GameObjects dos componentes, mas o SpriteRenderer é desativado internamente
+        // Ativa os GameObjects dos componentes, mas o SpriteRenderer ? desativado internamente
         foreach (var wave in waves)
         {
             foreach (var comp in wave.componentes)
@@ -69,7 +69,7 @@ public class RoboMaluco : MonoBehaviour
                     }
                 }
             }
-            else if (index == 1) // Wave 1 (não segue waypoints depois)
+            else if (index == 1) // Wave 1 (n?o segue waypoints depois)
             {
                 foreach (var componente in wave.componentes)
                 {
@@ -116,7 +116,7 @@ public class RoboMaluco : MonoBehaviour
             {
                 if (componente != null)
                 {
-                    componente.AtivarPiscada(); // Agora sim: pisca e ativa collider
+                
                 }
             }
         }
@@ -130,7 +130,7 @@ public class RoboMaluco : MonoBehaviour
                 gerenciador.hud.SetActive(true);
         }
 
-        Debug.Log("Todos os componentes prontos para interação.");
+        Debug.Log("Todos os componentes prontos para intera??o.");
     }
 
     void IniciarAtaque()
@@ -172,7 +172,7 @@ public class RoboMaluco : MonoBehaviour
         yield return new WaitForSeconds(3f); // Tempo de ataque
         FinalizarAtaque();
 
-        // Espera todos os componentes da Wave 0 terminarem (o restante será iniciado no callback)
+        // Espera todos os componentes da Wave 0 terminarem (o restante ser? iniciado no callback)
     }
 
     IEnumerator SeguirWaypoints()
@@ -210,7 +210,7 @@ public class RoboMaluco : MonoBehaviour
 
             IniciarAtaque();
             AtivarWave(1); // Inicia o segundo ataque
-            yield return new WaitForSeconds(3f); // Espera a animação de ataque
+            yield return new WaitForSeconds(3f); // Espera a anima??o de ataque
             FinalizarAtaque();
 
             // Agora sim: ativa piscada, collider, joystick e HUD

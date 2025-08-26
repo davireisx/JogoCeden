@@ -23,12 +23,5 @@ public class GerenciadorDeComponentesLancados : MonoBehaviour
         }
     }
 
-    public void AtivarPiscadas()
-    {
-        foreach (var c in componentes)
-        {
-            c.AtivarPiscada();
-        }
-    }
+   
 }
-

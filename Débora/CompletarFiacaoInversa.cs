@@ -7,17 +7,20 @@ public class CompletarFiacaoInversa : MonoBehaviour
     [Header("Fios a verificar")]
     public WireDragComLimite[] fios; // Atribua todos os fios no Inspector
 
-    [Header("Referências para troca")]
+    [Header("Refer?ncias para troca")]
     public Transform player;
     public Transform novoSpawnPoint;
     public GameObject joystick;
     public CameraManagerEsdras cameraManager;
     public Image telaFade;
+    public RoboController robo;
     public GameObject HUD;
+    public GameObject check;
 
     [Header("Configurações")]
     public float fadeDuration = 1f;
     public int novoCenarioIndex = 2;
+    public bool segundaFiacao;
 
     private bool trocaFeita = false;
 
@@ -25,7 +28,7 @@ public class CompletarFiacaoInversa : MonoBehaviour
     {
         if (fios.Length == 0)
         {
-            Debug.LogWarning("Nenhum fio atribuído no array de fios.");
+            Debug.LogWarning("Nenhum fio atribu?do no array de fios.");
         }
 
         if (telaFade != null)
@@ -51,7 +54,7 @@ public class CompletarFiacaoInversa : MonoBehaviour
                 break;
             }
 
-            // Se não está conectado ou está conectado no correto, falha a condição
+            // Se n?o est? conectado ou est? conectado no correto, falha a condi??o
             if (!fioConectadoErrado(fio))
             {
                 todosConectadosErrado = false;
@@ -68,7 +71,7 @@ public class CompletarFiacaoInversa : MonoBehaviour
 
     bool fioConectadoErrado(WireDragComLimite fio)
     {
-        // Ele está conectado, mas não no destino correto
+        // Ele est? conectado, mas n?o no destino correto
         return fio != null &&
                fio.GetEstaConectado() &&
                !fio.EstaNoDestinoCorreto();
@@ -76,6 +79,8 @@ public class CompletarFiacaoInversa : MonoBehaviour
 
     IEnumerator FazerTransicao()
     {
+        check.gameObject.SetActive(true);
+        yield return new WaitForSeconds(0.2f);
         telaFade.gameObject.SetActive(true);
         yield return StartCoroutine(FadeIn());
 
@@ -89,6 +94,15 @@ public class CompletarFiacaoInversa : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
         yield return StartCoroutine(FadeOut());
 
+        if (segundaFiacao == false)
+        {
+            robo.DarSegundaOrdem();
+        }
+
+        else
+        {
+            robo.StartCoroutine(robo.FadeBrancoParaPreto());
+        }
         telaFade.gameObject.SetActive(false);
 
         Debug.Log("? Vitória invertida: jogador bagunçou tudo corretamente!");

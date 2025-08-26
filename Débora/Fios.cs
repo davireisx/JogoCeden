@@ -23,10 +23,12 @@ public class WireDragComLimite : MonoBehaviour
     public Collider2D destino4;
     public Collider2D destinoCorreto;
 
-    [Header("Luz")]
+    [Header("Luz/Audio")]
     public GameObject luz;
+    public AudioSource audioFio;
 
     private Camera cam;
+    private bool foiConectadoAutomaticamente = false;
     private bool estaArrastando = false;
     private bool conectado = false;
     private bool conectadoNoErrado = false;
@@ -43,7 +45,6 @@ public class WireDragComLimite : MonoBehaviour
     {
         cam = Camera.main;
         tamanhoInicial = parteVisual.size.x;
-        if (luz != null) luz.SetActive(false);
         meuCollider = GetComponent<Collider2D>();
 
         Collider2D[] todosDestinos = { destino1, destino2, destino3, destino4, destinoCorreto };
@@ -80,7 +81,7 @@ public class WireDragComLimite : MonoBehaviour
             return;
         }
 
-        if (pressionando && !estaArrastando && (conectado || conectadoNoErrado))
+        if (pressionando && !estaArrastando && (conectado || conectadoNoErrado) && !foiConectadoAutomaticamente)
         {
             Collider2D hit = Physics2D.OverlapPoint(inputMundo);
             if (hit != null && hit.transform.IsChildOf(transform))
@@ -93,6 +94,7 @@ public class WireDragComLimite : MonoBehaviour
                 if (luz != null) luz.SetActive(false);
             }
         }
+
 
         if (pressionando)
         {
@@ -145,6 +147,11 @@ public class WireDragComLimite : MonoBehaviour
             {
                 meuCollider.enabled = true;
             }
+
+            // ?? Se existirem fios e uma luz na cena, desligar ao soltar
+            FiacaoRoboInvertido fiacao = FindObjectOfType<FiacaoRoboInvertido>();
+            if (fiacao != null && fiacao.lightObject != null)
+                fiacao.lightObject.SetActive(false);
 
             if (pontaFinal == null) return;
 
@@ -226,6 +233,8 @@ public class WireDragComLimite : MonoBehaviour
         }
 
         destinosOcupados[destino] = true;
+
+        audioFio.Play();
     }
 
     void LiberarDestinoAtual()
@@ -260,7 +269,6 @@ public class WireDragComLimite : MonoBehaviour
     {
         Collider2D destinoCol = destino.GetComponent<Collider2D>();
         if (destinoCol == null) return;
-
         if (destinoCol.CompareTag("NaoToca")) return;
         if (destinosOcupados.ContainsKey(destinoCol) && destinosOcupados[destinoCol]) return;
 
@@ -283,6 +291,9 @@ public class WireDragComLimite : MonoBehaviour
         }
 
         destinosOcupados[destinoCol] = true;
+
+        // ?? marca que foi automático
+        foiConectadoAutomaticamente = true;
     }
 
     public void SincronizarVisualComPontaFinal()
