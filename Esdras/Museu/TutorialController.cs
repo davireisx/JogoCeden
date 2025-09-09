@@ -12,6 +12,12 @@ public class TutorialController : MonoBehaviour
     public Button botaoAvancar;
     public Button botaoVoltar;
 
+
+    [Header("Audio")]
+    public AudioSource next;
+    public AudioSource back;
+
+
     void Start()
     {
         // Garante que apenas a tela atual está ativa
@@ -34,13 +40,26 @@ public class TutorialController : MonoBehaviour
 
     public void Avancar()
     {
+        Debug.Log("Avançar clicado - tentando tocar som");
+        if (next != null && next.clip != null)
+            next.Play();
+        else
+            Debug.LogWarning("AudioSource 'next' ou o AudioClip não foi configurado!");
+
         if (telaAtual != null) telaAtual.SetActive(false);
         if (telaSucessora != null) telaSucessora.SetActive(true);
     }
 
     public void Voltar()
     {
+        Debug.Log("Voltar clicado - tentando tocar som");
+        if (back != null && back.clip != null)
+            back.Play();
+        else
+            Debug.LogWarning("AudioSource 'back' ou o AudioClip não foi configurado!");
+
         if (telaAtual != null) telaAtual.SetActive(false);
         if (telaAnterior != null) telaAnterior.SetActive(true);
     }
+
 }

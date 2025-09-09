@@ -12,7 +12,7 @@ public class AlunoSegundoAno : MonoBehaviour
 
     private bool inputLocked = false;          // usado no knockback
     private float inputLockTimer = 0f;
-    private bool bloqueioInteracao = false;    // NOVO: bloqueia leitura do joystick durante interação
+    private bool bloqueioInteracao = false;    // bloqueia leitura do joystick durante interação
 
     private Rigidbody2D rb;
     private int vida;
@@ -38,20 +38,40 @@ public class AlunoSegundoAno : MonoBehaviour
 
     [Header("Componentes")]
     [SerializeField] private Animator anim;
-    [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private SpriteRenderer spriteRenderer; // referência principal (primeiro renderer da lista)
     [SerializeField] private string telaGameOver;
     private Color corOriginal;
+
+    // === NOVO: controla todos os sprites do player ===
+    private SpriteRenderer[] allSprites;
+    private Color[] coresOriginais;
 
     [Header("Knockback")]
     [SerializeField] private float forcaKnockback = 8f;
     [SerializeField] private float duracaoKnockback = 0.5f;
     [SerializeField] private AnimationCurve curvaKnockback;
 
+    [Header("Cenário Atual")]
+    public int cenarioAtual;   // Qual cenário o player está agora
+
+
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
+
+        // Pega TODOS os SpriteRenderers do player (objeto e filhos, inclusive inativos)
+        allSprites = GetComponentsInChildren<SpriteRenderer>(true);
+        if (allSprites == null || allSprites.Length == 0)
+            Debug.LogError("Nenhum SpriteRenderer encontrado no player!");
+
+        // Guarda cores originais para restaurar depois
+        coresOriginais = new Color[allSprites.Length];
+        for (int i = 0; i < allSprites.Length; i++)
+            coresOriginais[i] = allSprites[i].color;
+
+        // Mantém referência principal (se for usada em outros lugares)
+        spriteRenderer = allSprites[0];
         corOriginal = spriteRenderer.color;
 
         if (joystick == null)
@@ -64,6 +84,7 @@ public class AlunoSegundoAno : MonoBehaviour
 
     private void Update()
     {
+
         // Liberação automática do lock do knockback
         if (inputLocked)
         {
@@ -86,10 +107,9 @@ public class AlunoSegundoAno : MonoBehaviour
         }
 
         VerificarContatoComInimigo();
-        anim.SetBool("walking", moveInput.magnitude > 0.1f);
+        if (anim) anim.SetBool("walking", moveInput.magnitude > 0.1f);
         FlipCharacter();
     }
-
 
     private void FixedUpdate()
     {
@@ -159,10 +179,35 @@ public class AlunoSegundoAno : MonoBehaviour
         AtualizarHUDVida();
         Debug.Log($"Vida: {vida}/{vidaMaxima}");
 
-        if (vida <= 0)
+        if (vida <= 0) 
+        {
             Morrer();
-        else
+        }
+            
+        else 
+        {
             StartCoroutine(EfeitoDano());
+            
+        }
+    }
+
+    // === helpers de cor/visibilidade para todos os sprites ===
+    private void SetColorAll(Color c)
+    {
+        for (int i = 0; i < allSprites.Length; i++)
+            allSprites[i].color = c;
+    }
+
+    private void SetEnabledAll(bool enabled)
+    {
+        for (int i = 0; i < allSprites.Length; i++)
+            allSprites[i].enabled = enabled;
+    }
+
+    private void RestoreOriginalColors()
+    {
+        for (int i = 0; i < allSprites.Length; i++)
+            allSprites[i].color = coresOriginais[i];
     }
 
     private IEnumerator EfeitoDano()
@@ -170,26 +215,32 @@ public class AlunoSegundoAno : MonoBehaviour
         podeTomarDano = false;
         float tempo = 0f;
 
+
         while (tempo < tempoInvencivel)
         {
-            spriteRenderer.color = Color.black;
+
+            // preto
+            SetColorAll(Color.black);
             yield return new WaitForSeconds(intervaloPiscar);
 
-            spriteRenderer.enabled = false;
+            // invisível (desabilitado visualmente)
+            SetEnabledAll(false);
             yield return new WaitForSeconds(intervaloPiscar);
 
-            spriteRenderer.enabled = true;
-            spriteRenderer.color = Color.white;
+            // reaparece em branco (contraste)
+            SetEnabledAll(true);
+            SetColorAll(Color.white);
             yield return new WaitForSeconds(intervaloPiscar);
 
-            spriteRenderer.color = corOriginal;
+            // volta cor original
+            RestoreOriginalColors();
             yield return new WaitForSeconds(intervaloPiscar);
 
-            tempo += intervaloPiscar * 4;
+            tempo += intervaloPiscar * 4f;
         }
 
-        spriteRenderer.enabled = true;
-        spriteRenderer.color = corOriginal;
+        SetEnabledAll(true);
+        RestoreOriginalColors();
         podeTomarDano = true;
     }
 
@@ -220,7 +271,7 @@ public class AlunoSegundoAno : MonoBehaviour
         while (timer < duracaoKnockback)
         {
             float intensidade = curvaKnockback.Evaluate(timer / duracaoKnockback);
-            rb.MovePosition(rb.position + direcao * (forcaKnockback * 2) * intensidade * Time.deltaTime);
+            rb.MovePosition(rb.position + direcao * (forcaKnockback * 2f) * intensidade * Time.deltaTime);
             timer += Time.deltaTime;
             yield return null;
         }
@@ -253,8 +304,21 @@ public class AlunoSegundoAno : MonoBehaviour
 
             if (podeTomarDano)
             {
-                Vector2 direcao = (transform.position - other.transform.position).normalized;
-                StartCoroutine(AplicarKnockback(direcao));
+                // 1) Usa a última direção do player => empurra para trás
+                Vector2 dir = -ultimaDirecao;
+
+                // 2) Se estava parado, calcula pelo ponto de contato mais próximo
+                if (dir == Vector2.zero)
+                {
+                    Vector2 contato = other.bounds.ClosestPoint(transform.position);
+                    dir = ((Vector2)transform.position - contato).normalized;
+                }
+
+                // 3) Fallback
+                if (dir == Vector2.zero)
+                    dir = ((Vector2)transform.position - (Vector2)other.transform.position).normalized;
+
+                StartCoroutine(AplicarKnockback(dir));
             }
         }
 
@@ -286,16 +350,14 @@ public class AlunoSegundoAno : MonoBehaviour
     {
         moveInput = Vector2.zero;
         if (anim) anim.SetBool("walking", false);
-        rb.linearVelocity = Vector2.zero;       // IMPORTANTE: usar velocity no Rigidbody2D
+        rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
     }
 
     public void LiberarMovimento()
     {
         // libera QUALQUER bloqueio
-        bloqueioInteracao = false;   // <- ESSENCIAL
-        //inputLocked = false;
-        //inputLockTimer = 0f;
+        bloqueioInteracao = false;
 
         // limpa estados para recomeçar sem “arrasto”
         moveInput = Vector2.zero;
@@ -303,11 +365,7 @@ public class AlunoSegundoAno : MonoBehaviour
 
         rb.linearVelocity = Vector2.zero;
         if (anim) anim.SetBool("walking", false);
-        //rb.linearVelocity = Vector2.zero;
-        //rb.angularVelocity = 0f;
     }
-
-
 
     // NOVO: chamados pela UI/Interação
     public void ComecarInteracao()
@@ -320,5 +378,4 @@ public class AlunoSegundoAno : MonoBehaviour
     {
         LiberarMovimento();
     }
-
 }

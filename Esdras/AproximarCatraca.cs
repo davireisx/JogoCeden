@@ -12,6 +12,8 @@ public class AproximarCatraca : MonoBehaviour
     [SerializeField] private DesafioDasCores desafioDasCores;
     [SerializeField] private CatracaManager catracaManager;
 
+    [Header("Audio Botão")]
+    [SerializeField] private AudioSource audioBotao;
 
     private Camera mainCam;
     private RectTransform botaoRect;
@@ -35,7 +37,6 @@ public class AproximarCatraca : MonoBehaviour
 
         botaoInteracao.gameObject.SetActive(false);
 
-        // adiciona listener ao clique
         botaoInteracao.onClick.AddListener(OnBotaoClicked);
     }
 
@@ -50,21 +51,22 @@ public class AproximarCatraca : MonoBehaviour
             return;
         }
 
-        // Oculta se a catraca atual não deve ativar botão
-        if (!catraca.DeveAtivarBotao())
+        // Debug console
+        Debug.Log($"[AproximarCatraca] Cat: {catraca.name}, cor atual: {catraca.CurrentColor}");
+
+        // Verifica se a catraca deve ativar botão
+        bool podeAtivar = catraca.DeveAtivarBotao();
+        Debug.Log($"[AproximarCatraca] DeveAtivarBotao: {podeAtivar}");
+
+        // --- REMOVIDA a checagem de TodasEstaoCorrompidas() ---
+        // Agora cada catraca decide individualmente se mostra o botão
+        if (!podeAtivar)
         {
             botaoInteracao.gameObject.SetActive(false);
             return;
         }
 
-        // Oculta se ainda nem todas as catracas estão corrompidas
-        if (catracaManager == null || !catracaManager.TodasEstaoCorrompidas())
-        {
-            botaoInteracao.gameObject.SetActive(false);
-            return;
-        }
-
-        // Tudo OK, posiciona e mostra
+        // Posiciona e mostra
         Vector3 screenPos = mainCam.WorldToScreenPoint(transform.position);
         botaoRect.position = screenPos + new Vector3(0, 50f, 0);
 
@@ -72,9 +74,9 @@ public class AproximarCatraca : MonoBehaviour
             botaoInteracao.gameObject.SetActive(true);
     }
 
-
     public void OnBotaoClicked()
     {
+        audioBotao.Play();
         botaoInteracao.gameObject.SetActive(false);
         painelMinigame.SetActive(true);
         Catraca catracaAtual = GetComponent<Catraca>();
@@ -83,5 +85,15 @@ public class AproximarCatraca : MonoBehaviour
         desafioDasCores.IniciarMinigame(catracaAtual);
 
         Debug.Log("[AproximarCatraca] Minigame iniciado!");
+    }
+
+    void OnDrawGizmos()
+    {
+        if (jogador != null)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(transform.position, raioInteracao);
+            Gizmos.DrawLine(transform.position, jogador.position);
+        }
     }
 }

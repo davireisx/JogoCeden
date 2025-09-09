@@ -4,9 +4,11 @@ using System.Collections;
 public class CameraManager : MonoBehaviour
 {
     public CameraSeguirEsdras cameraScript;
+    public AlunoSegundoAno player; // arraste o Player no Inspector
 
     [Header("Configurações de Spawn")]
     public float delayAtivacaoSpawn = 1.5f;
+    public int cenarioIncio;
 
     [Header("Catraca1 - Number 1")]
     public float minX1;
@@ -88,7 +90,7 @@ public class CameraManager : MonoBehaviour
 
     private void Start()
     {
-        SetScenarioBounds(1);
+        SetScenarioBounds(cenarioIncio);
     }
 
     public void SetScenarioBounds(int index)
@@ -187,6 +189,9 @@ public class CameraManager : MonoBehaviour
             cameraScript.globalMaxY = maxY11;
             StartCoroutine(AtivarSpawnComDelay(AlunosSpawns11));
         }
+
+        if (player != null)
+            player.cenarioAtual = index;
 
         AtualizarSetas(index);
 

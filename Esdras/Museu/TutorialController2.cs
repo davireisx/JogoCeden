@@ -10,6 +10,9 @@ public class TutorialController2 : MonoBehaviour
     [Header("Botões")]
     public Button botaoAvancar;
 
+    [Header("Audio")]
+    public AudioSource somAvancar;
+
     void Start()
     {
         telaAtual.SetActive(true);
@@ -20,7 +23,7 @@ public class TutorialController2 : MonoBehaviour
 
     public void Avancar()
     {
-
+        somAvancar.Play();
        telaAtual.SetActive(false);
         telaSucessora.SetActive(true);
 

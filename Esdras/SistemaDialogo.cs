@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using System.Collections;
+using Unity.VisualScripting;
 
 public class SistemaDialogoDoisPersonagens : MonoBehaviour
 {
@@ -10,6 +11,9 @@ public class SistemaDialogoDoisPersonagens : MonoBehaviour
     public float interactionRange = 3f;
     public GameObject joystick;
     public GameObject hud;
+    public AudioSource next;
+    public AudioSource cliquePortal;
+    public AudioSource durantePortal;
 
     [Header("Transição de Fase")]
     public GameObject personagemParaDesaparecer;
@@ -106,6 +110,7 @@ public class SistemaDialogoDoisPersonagens : MonoBehaviour
         RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
         if (hit.collider != null && hit.collider.gameObject == this.gameObject)
         {
+            cliquePortal.Play();
             IniciarDialogo();
         }
     }
@@ -124,6 +129,7 @@ public class SistemaDialogoDoisPersonagens : MonoBehaviour
 
     void AvancarFala()
     {
+        next.Play();
         falaAtual++;
 
         if (falaAtual < falas.Length)
@@ -178,6 +184,7 @@ public class SistemaDialogoDoisPersonagens : MonoBehaviour
 
         dialogoAtivo = false;
 
+        durantePortal.Play();
         if (fadeGroup != null)
         {
             fadeGroup.alpha = 0f;

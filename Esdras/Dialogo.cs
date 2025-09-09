@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using System.Collections;
+using Unity.VisualScripting;
 
 public class Dialogo : MonoBehaviour
 {
@@ -15,6 +16,7 @@ public class Dialogo : MonoBehaviour
     public GameObject caixaPersonagem2;
     public Button botaoAvancar1;
     public Button botaoAvancar2;
+    public AudioSource next;
 
     [Header("Falas")]
     public GameObject[] falas;
@@ -57,6 +59,7 @@ public class Dialogo : MonoBehaviour
 
     public void AvancarFala()
     {
+        next.Play();
         falaAtual++;
 
         if (falaAtual < falas.Length)
@@ -86,7 +89,7 @@ public class Dialogo : MonoBehaviour
         caixaPersonagem2?.SetActive(!personagem1Falando);
 
         botaoAvancar1?.gameObject.SetActive(personagem1Falando);
-        botaoAvancar2?.gameObject.SetActive(!personagem1Falando);
+        botaoAvancar2?.gameObject.SetActive(!personagem1Falando);//
     }
 
     void MostrarFalaAtual()

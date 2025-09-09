@@ -11,8 +11,6 @@ public class Catraca : MonoBehaviour
     public Dificuldade dificuldade;
     private CatracaManager manager;
 
-    [Header("Texto de confirmação")]
-    [SerializeField] private GameObject textoCheck;
 
 
     [Header("Configurações Básicas")]

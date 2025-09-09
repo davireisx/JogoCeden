@@ -19,6 +19,10 @@ public class SenhaController : MonoBehaviour
     public GameObject objetivos2;
     public Text checkText;
 
+    [Header("Áudios de resultado")]
+    public AudioClip somSucesso;
+    public AudioClip somErro;
+
     [Header("Feedback")]
     public GameObject textoCheck; // "CHECK"
     private CanvasGroup fadeCanvasGroup;
@@ -30,6 +34,7 @@ public class SenhaController : MonoBehaviour
         public Text texto;                 // Texto dentro do botão
         public Color corFeedback = Color.green;
         public AudioClip somClique;
+        public bool isOK = false;
     }
 
     [Header("Configuração de cada dígito")]
@@ -60,10 +65,10 @@ public class SenhaController : MonoBehaviour
         {
             if (cfg.botao != null)
             {
-                cfg.botao.onClick.AddListener(() => OnBotaoClicado(cfg));
+                ConfiguracaoDigito cfgCapturado = cfg; // captura corretamente a variável
+                cfg.botao.onClick.AddListener(() => OnBotaoClicado(cfgCapturado));
             }
         }
-
 
         if (joystick != null)
             joystick.SetActive(false);
@@ -78,32 +83,33 @@ public class SenhaController : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        Debug.Log(codigoDigitado.Length);
+    }
+
     private void OnBotaoClicado(ConfiguracaoDigito cfg)
     {
         if (bloqueado) return;
 
         string valor = cfg.texto.text;
 
-        // Feedback visual e sonoro
-        if (!feedbacks.ContainsKey(cfg.botao) || feedbacks[cfg.botao] == null)
-            StartCoroutine(FeedbackDigito(cfg));
+        
+            // 🔹 Números ou backspace
+            if (!feedbacks.ContainsKey(cfg.botao) || feedbacks[cfg.botao] == null)
+                feedbacks[cfg.botao] = StartCoroutine(FeedbackDigito(cfg));
 
-        // Se for número (0-9), adiciona
-        if (char.IsDigit(valor, 0))
-        {
-            DigitarNumero(valor);
-        }
-        // Se for apagar
-        else if (valor == "←")
-        {
-            Apagar();
-        }
-        // Se for OK
+            if (char.IsDigit(valor, 0))
+                DigitarNumero(valor);
+            else if (valor == "←")
+                Apagar();
         else if (valor == "OK")
-        {
             ValidarSenha();
-        }
+        
+
     }
+
+
 
 
     private void DigitarNumero(string numero)
@@ -113,30 +119,71 @@ public class SenhaController : MonoBehaviour
         if (codigoDigitado.Length < limiteDigitos)
         {
             codigoDigitado += numero[0]; // Adiciona apenas o primeiro caractere
+            Debug.Log($"Digitado: {codigoDigitado}, Length: {codigoDigitado.Length}");
             AtualizarVisor();
         }
     }
-
 
     private IEnumerator FeedbackDigito(ConfiguracaoDigito cfg)
     {
         if (cfg.somClique != null && audioSource != null)
             audioSource.PlayOneShot(cfg.somClique);
 
-        Color corOriginal = cfg.texto.color;
+        // pega as cores originais
+        Color corOriginalTexto = cfg.texto.color;
+        Color corOriginalBotao = cfg.botao.image.color;
+
+        // aplica cor de feedback
         cfg.texto.color = cfg.corFeedback;
+        cfg.botao.image.color = cfg.corFeedback;
 
-        // Armazena coroutine para evitar reentrada
-        feedbacks[cfg.botao] = StartCoroutine(ResetarCor(cfg, corOriginal));
-        yield return feedbacks[cfg.botao];
+        yield return new WaitForSeconds(0.2f); // intervalo do piscar
+
+        // volta cores originais
+        cfg.texto.color = corOriginalTexto;
+        cfg.botao.image.color = corOriginalBotao;
+
+        feedbacks[cfg.botao] = null; // libera botão pra novo clique
     }
 
-    private IEnumerator ResetarCor(ConfiguracaoDigito cfg, Color corOriginal)
+    private IEnumerator FeedbackBotaoOKIncompleto(ConfiguracaoDigito cfg)
     {
-        yield return new WaitForSeconds(0.2f); // Intervalo do feedback
-        cfg.texto.color = corOriginal;
-        feedbacks[cfg.botao] = null; // Libera para novo clique
+        Debug.Log("Incompleto!");
+        // 🔹 Sem som para OK incompleto
+        Color corOriginalBotao = cfg.botao.image.color;
+
+        // 🔹 Apenas o botão pisca (texto não)
+        for (int i = 0; i < 2; i++)
+        {
+            cfg.botao.image.color = cfg.corFeedback;
+            yield return new WaitForSeconds(0.15f);
+            cfg.botao.image.color = corOriginalBotao;
+            yield return new WaitForSeconds(0.15f);
+        }
+
+        feedbacks[cfg.botao] = null; // libera botão
     }
+
+    // Pisca botão + texto, toca som e valida senha
+    private IEnumerator FeedbackBotaoOKCompleto(ConfiguracaoDigito cfg)
+    {
+        Color corOriginalBotao = cfg.botao.image.color;
+        Color corOriginalTexto = cfg.texto.color;
+
+        // Apenas feedback visual
+        for (int i = 0; i < 2; i++)
+        {
+            cfg.botao.image.color = cfg.corFeedback;
+            cfg.texto.color = cfg.corFeedback;
+            yield return new WaitForSeconds(0.15f);
+            cfg.botao.image.color = corOriginalBotao;
+            cfg.texto.color = corOriginalTexto;
+            yield return new WaitForSeconds(0.15f);
+        }
+
+        feedbacks[cfg.botao] = null; // libera botão
+    }
+
 
     public void Apagar()
     {
@@ -178,33 +225,48 @@ public class SenhaController : MonoBehaviour
         }
 
         // Monta a string final do visor
-        visor.text = $"{display[0]}  {display[1]}  {display[2]}  {display[3]}";
+        visor.text = $"  {display[0]}     {display[1]}     {display[2]}     {display[3]}";
     }
-
 
     private IEnumerator Erro()
     {
+        if (audioSource != null && somErro != null)
+            audioSource.PlayOneShot(somErro);
+
+        ConfiguracaoDigito okCfg = configuracoes.Find(c => c.isOK);
+        if (okCfg != null)
+            yield return StartCoroutine(FeedbackBotaoOKIncompleto(okCfg));
+
         bloqueado = true;
 
         for (int i = 0; i < 4; i++)
         {
-            visor.text = " ";
+            visor.text = "";
             yield return new WaitForSeconds(0.15f);
-
             AtualizarVisor();
             yield return new WaitForSeconds(0.15f);
         }
 
-        visor.text = "  E  R  R  0  R";
+        visor.text = " E R R 0 R";
         yield return new WaitForSeconds(1f);
 
-        codigoDigitado = " ";
+        codigoDigitado = "";
         AtualizarVisor();
         bloqueado = false;
     }
 
     private IEnumerator Sucesso()
     {
+        bloqueado = true;
+
+        // Toca som de sucesso uma vez
+        if (audioSource != null && somSucesso != null)
+            audioSource.PlayOneShot(somSucesso);
+
+        ConfiguracaoDigito okCfg = configuracoes.Find(c => c.isOK);
+        if (okCfg != null)
+            yield return StartCoroutine(FeedbackBotaoOKCompleto(okCfg));
+
         bloqueado = true;
 
         if (fechar != null) fechar.SetActive(false);
@@ -232,7 +294,6 @@ public class SenhaController : MonoBehaviour
 
         if (fadeCanvasGroup != null)
             yield return StartCoroutine(Fade(1.5f, 0f, 1.5f));
-
         if (joystick != null) joystick.SetActive(true);
         if (hud != null) hud.SetActive(true);
         if (objetivos1 != null) objetivos1.SetActive(false);

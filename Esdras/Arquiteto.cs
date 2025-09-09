@@ -21,8 +21,11 @@ public class Arquiteto : MonoBehaviour
     [Header("Comportamento Final")]
     public bool pararNoUltimoWaypoint = true;
 
-    [Header("Referências de Animação")]
+    [Header("Referências")]
     public Animator animator;
+    public GameObject trap;
+    public AudioSource audioAtaque;
+    public AudioSource audioTiro;
 
     private bool podeAtirar = false;
     private int currentWaypointIndex = 0;
@@ -77,12 +80,14 @@ public class Arquiteto : MonoBehaviour
             comandoRecebido = true;
             indoParaPosicaoInicial = true;
 
+            trap.SetActive(true);
             StartCoroutine(ExecutarInicio());
         }
     }
 
     IEnumerator ExecutarInicio()
     {
+        audioAtaque.Play();
         animator.SetBool("Atacando", true);
         yield return new WaitForSeconds(0.5f);
         animator.SetBool("Atacando", false);
@@ -138,6 +143,7 @@ public class Arquiteto : MonoBehaviour
         isWaiting = true;
         waitTimer = 0f;
 
+        audioAtaque.Play();
         // Ativa animação de ataque por 1 segundo
         animator.SetBool("Atacando", true);
         yield return new WaitForSeconds(1f);
@@ -166,6 +172,7 @@ public class Arquiteto : MonoBehaviour
         if (projetilPrefab != null)
         {
             GameObject projetil = Instantiate(projetilPrefab, pontoDeTiro.position, Quaternion.identity);
+            audioTiro.Play();
 
             DisparoCodigo dc = projetil.GetComponent<DisparoCodigo>();
             if (dc == null)
@@ -224,6 +231,8 @@ public class Arquiteto : MonoBehaviour
             }
         }
     }
+
+
 
     void OnDrawGizmos()
     {

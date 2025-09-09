@@ -505,8 +505,8 @@ public class DesafioDasCores : MonoBehaviour
             botoes[i].interactable = false;
         }
 
-        // 2) Pisca verde por 4 segundos
-        yield return StartCoroutine(PiscarBotoes(Color.green, 4f));
+        // 1) Pisca verde por 1.5 segundos
+        yield return StartCoroutine(PiscarBotoes(Color.green, 1.5f));
         telaVitoria.gameObject.SetActive(true);
         yield return new WaitForSeconds(1.5f);
         painelDoJogo.SetActive(false);
@@ -544,8 +544,8 @@ public class DesafioDasCores : MonoBehaviour
             botoes[i].interactable = false;
         }
 
-        // 2) Pisca vermelho por 4 segundos
-        yield return StartCoroutine(PiscarBotoes(Color.red, 4f));
+        // 2) Pisca vermelho por 1.5 segundos
+        yield return StartCoroutine(PiscarBotoes(Color.red, 1.5f));
         telaDerrota.gameObject.SetActive(true);
         yield return new WaitForSeconds(1.5f);
         painelDoJogo.SetActive(false);

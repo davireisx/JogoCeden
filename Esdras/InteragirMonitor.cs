@@ -1,23 +1,25 @@
-Ôªøusing UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem; // Input System novo
+using System.Collections;
+using System.Collections.Generic;
 
-public class InteragirItens : MonoBehaviour
+
+public class InteragirMonitor : MonoBehaviour
 {
-    [Header("Configura√ß√µes de Intera√ß√£o")]
+    [Header("ConfiguraÁıes de InteraÁ„o")]
     public Transform player;
     public float interactionRange = 3f;
 
-    [Header("Refer√™ncias de UI")]
+    [Header("ReferÍncias de UI")]
     public GameObject imagePanel;
     public GameObject HUD;
-    public GameObject fechar;
-    public Joystick joystick;
     public SpriteRenderer spriteRenderer;
+    public Guarita guarita;
 
     [Header("Brilho")]
     public Color highlightColor = Color.yellow;
 
-    [Header("√Åudio")]
+    [Header("¡udio")]
     public AudioSource audioSource; // <--- Arraste o AudioSource aqui no Inspector
 
     private Collider2D col;
@@ -29,22 +31,20 @@ public class InteragirItens : MonoBehaviour
 
     void Start()
     {
-       
+
         if (spriteRenderer != null)
             originalColor = spriteRenderer.color;
         else
-            Debug.LogWarning($"[{gameObject.name}] SpriteRenderer n√£o encontrado!");
+            Debug.LogWarning($"[{gameObject.name}] SpriteRenderer n„o encontrado!");
 
         col = GetComponent<Collider2D>(); // <--- pega o collider 2D
         if (col == null)
-            Debug.LogWarning($"[{gameObject.name}] Collider2D n√£o encontrado!");
+            Debug.LogWarning($"[{gameObject.name}] Collider2D n„o encontrado!");
 
-        if (player == null) Debug.LogError("Player n√£o atribu√≠do!");
-        if (audioSource == null) Debug.LogWarning($"[{gameObject.name}] AudioSource n√£o atribu√≠do!");
+        if (player == null) Debug.LogError("Player n„o atribuÌdo!");
+        if (audioSource == null) Debug.LogWarning($"[{gameObject.name}] AudioSource n„o atribuÌdo!");
 
         imagePanel?.SetActive(false);
-        fechar?.SetActive(false);
-        joystick?.gameObject.SetActive(true);
         HUD?.SetActive(true);
     }
     void Update()
@@ -93,20 +93,24 @@ public class InteragirItens : MonoBehaviour
         RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
         if (hit.collider != null && hit.collider.gameObject == this.gameObject && playerInRange)
         {
-            Abrir();
+            StartCoroutine(Som());
         }
+    }
+
+    private IEnumerator Som ()
+    {
+        audioSource.Play();
+        yield return new WaitForSeconds(0.1f);
+        Abrir();
     }
 
     public void Abrir()
     {
-        if (audioSource != null && !audioSource.isPlaying)
-            audioSource.Play(); // Toca o som
+
+        guarita.Inicio();
 
         imageActive = true;
         imagePanel?.SetActive(true);
-        fechar?.SetActive(true);
-        joystick?.gameObject.SetActive(false);
-        HUD?.SetActive(false);
 
         if (col != null)
             col.enabled = false; // Desativa o collider
@@ -116,8 +120,7 @@ public class InteragirItens : MonoBehaviour
     {
         imageActive = false;
         imagePanel?.SetActive(false);
-        fechar?.SetActive(false);
-        joystick?.gameObject.SetActive(true);
+
         HUD?.SetActive(true);
 
         if (col != null)

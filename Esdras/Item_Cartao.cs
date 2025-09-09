@@ -19,12 +19,15 @@ public class ItemInteraction : MonoBehaviour
     public GameObject seta1;
     public GameObject seta2;
 
+    [Header("Audio")]
+    public AudioSource item;
+
     [Header("Referências Visuais")]
     public GameObject hud;                   // Imagem que aparece após 3s
     public GameObject quadrado1;
     public GameObject quadrado2;
     public GameObject check;
-    public CartãoInteração cartaoInteracao;      // Arraste o script no Inspector
+    public InteragirMonitor pendriveInteracao;      // Arraste o script no Inspector
     public Color highlightColor = Color.yellow;  // Cor de brilho
 
     [Header("Sprite")]
@@ -102,6 +105,7 @@ public class ItemInteraction : MonoBehaviour
         RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
         if (hit.collider != null && hit.collider.gameObject == this.gameObject)
         {
+            item.Play();
             Interagir();
         }
     }
@@ -113,8 +117,8 @@ public class ItemInteraction : MonoBehaviour
         seta1.gameObject.SetActive(false);
         seta2.gameObject.SetActive(true);
 
-        if (cartaoInteracao != null)
-            cartaoInteracao.interactionRange = 7f;
+        
+        pendriveInteracao.interactionRange = 7f;
 
         if (joystickImage != null)
             joystickImage.enabled = false; // Apenas oculta a imagem visual
